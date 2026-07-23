@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+.venv/
+venv/
+virtualenv/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Vector store
+chroma_data/
+persistent_chroma/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+*.~
+
+# Runtime uploads
+uploads/*
+!uploads/.gitkeep
+
+# Temp docs (development plan, removed before release)
+docs/
+
+# Jupyter (notebooks used for reference, not part of v2)
+*.ipynb
