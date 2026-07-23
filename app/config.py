@@ -4,7 +4,7 @@ from functools import lru_cache
 
 class Config(BaseSettings):
     google_api_key: str = ""
-    gemini_model: str = "gemini-2.5-flash"
+    gemini_model: str = "gemini-3.1-flash-lite"
     embedding_model: str = "gemini-embedding-2-preview"
     chroma_host: str = "localhost"
     chroma_port: int = 8000
