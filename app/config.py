@@ -4,8 +4,8 @@ from functools import lru_cache
 
 class Config(BaseSettings):
     google_api_key: str = ""
-    gemini_model: str = "gemini-2.0-flash"
-    embedding_model: str = "models/text-embedding-004"
+    gemini_model: str = "gemini-2.5-flash"
+    embedding_model: str = "gemini-embedding-2-preview"
     chroma_host: str = "localhost"
     chroma_port: int = 8000
     database_url: str = "sqlite+aiosqlite:///./solicitudes.db"
