@@ -1,6 +1,7 @@
 import json
 import re
 
+from app.agents.base import extraer_texto
 from app.services.llm_service import obtener_llm
 
 PROMPT_EVALUADOR = """Eres un evaluador de respuestas de un sistema de asistencia legal. Evalúa la respuesta generada según los siguientes criterios:
@@ -25,7 +26,7 @@ def evaluar_respuesta(pregunta: str, respuesta: str) -> dict:
             "content": f"PREGUNTA:\n{pregunta}\n\nRESPUESTA:\n{respuesta}",
         },
     ])
-    texto = msg.content.strip()
+    texto = extraer_texto(msg.content)
     match = re.search(r"\{.*\}", texto, re.DOTALL)
     if match:
         return json.loads(match.group())
