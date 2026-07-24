@@ -41,14 +41,9 @@ def crear_orquestador():
 orquestador = crear_orquestador()
 
 
-def consultar(pregunta: str, thread_id: str | None = None):
-    thread_id = thread_id or f"legal-{uuid.uuid4().hex[:8]}"
-    config = {"configurable": {"thread_id": thread_id}}
-
-    resultado = orquestador.invoke(
-        {"messages": [{"role": "user", "content": pregunta}]}, config
-    )
-
+def _extraer_trazas(
+    resultado: dict,
+) -> dict:
     agentes_vistos: set[str] = set()
     trazas: list[dict] = []
     respuesta_final = ""
@@ -80,3 +75,14 @@ def consultar(pregunta: str, thread_id: str | None = None):
         "trazas": trazas,
         "raw": resultado,
     }
+
+
+def consultar(pregunta: str, thread_id: str | None = None):
+    thread_id = thread_id or f"legal-{uuid.uuid4().hex[:8]}"
+    config = {"configurable": {"thread_id": thread_id}}
+
+    resultado = orquestador.invoke(
+        {"messages": [{"role": "user", "content": pregunta}]}, config
+    )
+
+    return _extraer_trazas(resultado)

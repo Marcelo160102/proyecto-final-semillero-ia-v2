@@ -13,6 +13,14 @@ from app.routers import admin, chat, registros
 async def lifespan(_app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    try:
+        from app.phoenix_setup import setup_phoenix
+
+        setup_phoenix()
+    except Exception as exc:
+        import logging
+
+        logging.warning("Phoenix no disponible: %s", exc)
     yield
     await engine.dispose()
 
