@@ -22,9 +22,17 @@ def md_basico(value: str):
     return result
 
 
-templates = Jinja2Templates(
+class _Templates(Jinja2Templates):
+    def TemplateResponse(self, request, name, context=None, status_code=200, headers=None, media_type=None, background=None):
+        return super().TemplateResponse(
+            request, name, context=context, status_code=status_code,
+            headers=headers, media_type="text/html; charset=utf-8",
+            background=background,
+        )
+
+
+templates = _Templates(
     directory=os.path.join(os.path.dirname(__file__), "templates")
 )
-
 templates.env.filters["from_json"] = from_json
 templates.env.filters["md_basico"] = md_basico

@@ -8,6 +8,10 @@ config = obtener_config()
 
 
 def _obtener_cliente():
+    if config.chroma_host != "localhost":
+        return chromadb.HttpClient(
+            host=config.chroma_host, port=config.chroma_port
+        )
     return chromadb.PersistentClient(path="./chroma_data")
 
 
