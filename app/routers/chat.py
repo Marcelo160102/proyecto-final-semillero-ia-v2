@@ -1,8 +1,10 @@
 import asyncio
 import json
+from pathlib import Path
+from uuid import uuid4
 
-from fastapi import APIRouter, Form, Request
-from sqlalchemy import select
+from fastapi import APIRouter, File, Form, Request, UploadFile
+from sqlalchemy import delete, select
 
 from app.agents.orquestador import consultar
 from app.database import async_session
@@ -29,9 +31,25 @@ async def pagina_chat(request: Request):
 
 
 @router.post("/chat")
-async def enviar_consulta(request: Request, pregunta: str = Form(...)):
+async def enviar_consulta(
+    request: Request,
+    pregunta: str = Form(...),
+    imagen: UploadFile | None = File(None),
+):
+    ruta_imagen = None
+    if imagen and imagen.filename:
+        ext = Path(imagen.filename).suffix or ".png"
+        dest = Path("app/static/uploads") / f"chat_{uuid4().hex}{ext}"
+        dest.write_bytes(await imagen.read())
+        ruta_imagen = str(dest)
+
+    pregunta_final = (
+        f"{pregunta}\nRUTA_IMAGEN: {ruta_imagen}"
+        if ruta_imagen else pregunta
+    )
+
     loop = asyncio.get_event_loop()
-    resultado = await loop.run_in_executor(None, consultar, pregunta)
+    resultado = await loop.run_in_executor(None, consultar, pregunta_final)
 
     async with async_session() as session:
         consulta = Consulta(
@@ -43,10 +61,17 @@ async def enviar_consulta(request: Request, pregunta: str = Form(...)):
         session.add(consulta)
         await session.commit()
 
+    contexto = {
+        "pregunta": pregunta,
+        "respuesta": resultado,
+    }
+    if ruta_imagen:
+        contexto["imagen_url"] = f"/static/uploads/{Path(ruta_imagen).name}"
+
     response = templates.TemplateResponse(
         request,
         "fragments/mensaje_chat.html",
-        {"pregunta": pregunta, "respuesta": resultado},
+        contexto,
     )
     response.headers["HX-Trigger"] = "history-updated"
     return response
@@ -66,3 +91,12 @@ async def historial_fragment(request: Request):
     return templates.TemplateResponse(
         request, "fragments/historial.html", {"historial": historial}
     )
+
+
+@router.delete("/historial")
+async def limpiar_historial():
+    async with async_session() as session:
+        await session.execute(delete(Consulta))
+        await session.commit()
+    from starlette.responses import Response
+    return Response(headers={"HX-Trigger": "history-updated"})

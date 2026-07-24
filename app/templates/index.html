@@ -32,18 +32,24 @@
 
     <form class="chat-form"
           hx-post="/chat"
+          hx-encoding="multipart/form-data"
           hx-target="#chat-area"
           hx-swap="beforeend"
-          hx-on::after-request="this.reset(); document.getElementById('chat-empty')?.remove()">
+          hx-on::after-request="this.reset(); document.getElementById('chat-empty')?.remove(); document.getElementById('file-preview').innerText=''">
         <div class="chat-input-row">
+            <label class="upload-btn" title="Adjuntar imagen de documento">
+                📎
+                <input type="file" name="imagen" accept="image/*" id="input-imagen" onchange="document.getElementById('file-preview').innerText = this.files[0] ? '📷 ' + this.files[0].name : ''">
+            </label>
             <input type="text"
                    name="pregunta"
                    class="chat-input"
-                   placeholder="Ej: ¿Qué cláusulas debe tener un contrato de prestación de servicios?"
+                   placeholder="Ej: ¿Qué cláusulas debe tener un contrato o sube un documento..."
                    required
                    autofocus>
             <button type="submit" class="chat-btn">Enviar</button>
         </div>
+        <div id="file-preview" class="file-preview"></div>
     </form>
 </div>
 

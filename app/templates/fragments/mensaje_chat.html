@@ -1,5 +1,10 @@
 <div class="msg-row user">
-    <div class="msg-bubble user-bubble">{{ pregunta }}</div>
+    <div class="msg-bubble user-bubble">
+        {% if imagen_url %}
+        <img src="{{ imagen_url }}" class="chat-img" alt="Documento adjunto">
+        {% endif %}
+        {{ pregunta }}
+    </div>
 </div>
 
 <div class="msg-row agent">

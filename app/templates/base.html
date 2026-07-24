@@ -30,6 +30,13 @@
                      hx-swap="innerHTML">
                     {% include "fragments/historial.html" %}
                 </div>
+                <button class="btn-limpiar"
+                        hx-delete="/historial"
+                        hx-confirm="Borrar todo el historial?"
+                        hx-target="#historial"
+                        hx-swap="innerHTML">
+                    🗑️ Limpiar historial
+                </button>
             </div>
         </aside>
 
