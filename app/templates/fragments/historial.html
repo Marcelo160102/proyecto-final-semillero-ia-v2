@@ -1,0 +1,16 @@
+{% if historial %}
+    {% for c in historial %}
+    <div class="history-item">
+        <div class="history-question">{{ c.pregunta[:80] }}{% if c.pregunta|length > 80 %}…{% endif %}</div>
+        <div class="history-meta">
+            {{ c.fecha_creacion.strftime("%d/%m %H:%M") }}
+            {% if c.agentes_participantes %}
+                {% set agentes = c.agentes_participantes | from_json %}
+                <span class="history-agentes">• {{ agentes | length }} agente(s)</span>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="history-empty">Aún no hay consultas.</div>
+{% endif %}

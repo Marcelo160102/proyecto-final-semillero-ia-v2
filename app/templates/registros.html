@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="registros-container">
+    <div class="registros-header">
+        <h1>📋 Solicitudes Registradas</h1>
+    </div>
+
+    {% if registros %}
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Tipo</th>
+                    <th>Proveedor</th>
+                    <th>Objeto</th>
+                    <th>Plazo</th>
+                    <th>Monto</th>
+                    <th>Trata Datos</th>
+                    <th>Fecha</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in registros %}
+                <tr>
+                    <td class="col-id">{{ r.identificador }}</td>
+                    <td>{{ r.tipo_contrato }}</td>
+                    <td>{{ r.proveedor }}</td>
+                    <td>{{ r.objeto }}</td>
+                    <td class="col-plazo">{{ r.plazo }}</td>
+                    <td class="col-monto">{{ r.monto }}</td>
+                    <td>{{ "Sí" if r.trata_datos else "No" }}</td>
+                    <td class="col-fecha">{{ r.fecha_creacion.strftime("%d/%m/%Y %H:%M") }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No hay solicitudes registradas aún.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="chat-container">
+    <div class="chat-header">
+        <h1>💬 Chat Legal</h1>
+        <p class="chat-subtitle">Consultas sobre contratos, protección de datos y cumplimiento normativo</p>
+    </div>
+
+    <div class="chat-messages" id="chat-area">
+        {% if historial %}
+            {% for c in historial | reverse %}
+                {% with
+                    pregunta=c.pregunta,
+                    respuesta={
+                        "respuesta": c.respuesta,
+                        "agentes": c.agentes_participantes | from_json if c.agentes_participantes else [],
+                        "trazas": c.fuentes | from_json if c.fuentes else []
+                    }
+                %}
+                    {% include "fragments/mensaje_chat.html" %}
+                {% endwith %}
+            {% endfor %}
+        {% else %}
+            <div class="chat-empty" id="chat-empty">
+                <div class="empty-icon">⚖️</div>
+                <p>Bienvenido a la Mesa de Ayuda Legal</p>
+                <p class="empty-hint">Escribe tu consulta sobre contratos, protección de datos o cumplimiento normativo.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <form class="chat-form"
+          hx-post="/chat"
+          hx-target="#chat-area"
+          hx-swap="beforeend"
+          hx-on::after-request="this.reset(); document.getElementById('chat-empty')?.remove()">
+        <div class="chat-input-row">
+            <input type="text"
+                   name="pregunta"
+                   class="chat-input"
+                   placeholder="Ej: ¿Qué cláusulas debe tener un contrato de prestación de servicios?"
+                   required
+                   autofocus>
+            <button type="submit" class="chat-btn">Enviar</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        var area = document.getElementById('chat-area');
+        if (area) {
+            area.scrollTop = area.scrollHeight;
+        }
+    });
+</script>
+{% endblock %}

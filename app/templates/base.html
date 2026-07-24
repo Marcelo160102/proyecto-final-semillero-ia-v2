@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Mesa de Ayuda Legal — Patito S.A.{% endblock %}</title>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <link rel="stylesheet" href="/static/estilo.css">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-logo">⚖️</span>
+                <span class="sidebar-titulo">Patito S.A.</span>
+                <span class="sidebar-subtitulo">Mesa de Ayuda Legal</span>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/" class="nav-link active">💬 Chat Legal</a>
+                <a href="/registros" class="nav-link">📋 Solicitudes</a>
+            </nav>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Historial</div>
+                <div id="historial"
+                     hx-get="/historial"
+                     hx-trigger="history-updated from:body"
+                     hx-swap="innerHTML">
+                    {% include "fragments/historial.html" %}
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</body>
+</html>
