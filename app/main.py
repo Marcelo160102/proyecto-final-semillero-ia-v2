@@ -4,8 +4,9 @@ import os
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from app.database import engine, async_session
+from app.database import engine
 from app.models import Base
+from app.routers import admin, chat, registros
 
 
 @asynccontextmanager
@@ -24,10 +25,11 @@ app = FastAPI(
 )
 
 static_dir = os.path.join(os.path.dirname(__file__), "..", "static")
+uploads_dir = os.path.join(os.path.dirname(__file__), "..", "uploads")
 os.makedirs(static_dir, exist_ok=True)
+os.makedirs(uploads_dir, exist_ok=True)
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-
-@app.get("/health")
-async def health():
-    return {"status": "ok", "version": "2.0.0"}
+app.include_router(chat.router)
+app.include_router(registros.router)
+app.include_router(admin.router)
