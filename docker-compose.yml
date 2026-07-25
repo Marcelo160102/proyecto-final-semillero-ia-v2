@@ -1,6 +1,6 @@
 services:
   chromadb:
-    image: chromadb/chroma:latest
+    image: ghcr.io/chroma-core/chroma:1.5.9
     ports:
       - "8000:8000"
     volumes:
@@ -11,7 +11,7 @@ services:
       - ANONYMIZED_TELEMETRY=FALSE
 
   phoenix:
-    image: arize/phoenix:latest
+    image: ghcr.io/arize-ai/phoenix:latest
     ports:
       - "6006:6006"
       - "4317:4317"
