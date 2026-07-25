@@ -34,8 +34,7 @@
           hx-post="/chat"
           hx-encoding="multipart/form-data"
           hx-target="#chat-area"
-          hx-swap="beforeend"
-          hx-on::after-request="this.reset(); document.getElementById('chat-empty')?.remove(); document.getElementById('file-preview').innerText=''">
+          hx-swap="beforeend">
         <div class="chat-input-row">
             <label class="upload-btn" title="Adjuntar imagen de documento">
                 📎
@@ -49,20 +48,43 @@
                    autofocus>
             <button type="submit" class="chat-btn">Enviar</button>
         </div>
-        <div class="loading-indicator">
-            <div class="spinner"></div>
-            <span>Analizando consulta...</span>
-        </div>
         <div id="file-preview" class="file-preview"></div>
     </form>
 </div>
 
 <script>
-    document.body.addEventListener('htmx:afterSwap', function(evt) {
+    document.querySelector('.chat-form').addEventListener('htmx:beforeRequest', function() {
+        var input = this.querySelector('.chat-input');
+        var pregunta = input.value.trim();
+        if (!pregunta) return;
+
         var area = document.getElementById('chat-area');
-        if (area) {
-            area.scrollTop = area.scrollHeight;
-        }
+        var empty = document.getElementById('chat-empty');
+        if (empty) empty.remove();
+
+        var userDiv = document.createElement('div');
+        userDiv.className = 'msg-row user';
+        userDiv.innerHTML = '<div class="msg-bubble user-bubble">' + pregunta.replace(/</g, '&lt;') + '</div>';
+        area.appendChild(userDiv);
+
+        var loadDiv = document.createElement('div');
+        loadDiv.className = 'msg-row agent';
+        loadDiv.id = 'loading-indicator-chat';
+        loadDiv.innerHTML = '<div class="msg-bubble agent-bubble"><div class="loading-inline"><div class="spinner"></div><span>Pensando...</span></div></div>';
+        area.appendChild(loadDiv);
+        area.scrollTop = area.scrollHeight;
+
+        input.value = '';
+        var fp = document.getElementById('file-preview');
+        if (fp) fp.innerText = '';
+    });
+
+    document.body.addEventListener('htmx:afterSwap', function() {
+        var area = document.getElementById('chat-area');
+        if (!area) return;
+        var load = document.getElementById('loading-indicator-chat');
+        if (load) load.remove();
+        area.scrollTop = area.scrollHeight;
     });
 </script>
 {% endblock %}
