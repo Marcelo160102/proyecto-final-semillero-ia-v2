@@ -22,7 +22,7 @@
                 <div class="trace-item trace-{{ t.tipo }}">
                     <span class="trace-tool">{{ t.tool }}</span>
                     {% if t.tipo == "accion" %}
-                        <span class="trace-args">({{ t.args | tojson }})</span>
+                        <span class="trace-args">({{ t.args | tojson_pretty }})</span>
                     {% else %}
                         <span class="trace-preview">{{ t.preview }}</span>
                     {% endif %}

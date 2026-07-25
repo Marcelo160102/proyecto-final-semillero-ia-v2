@@ -23,7 +23,6 @@ Reglas de ruteo:
 - Si falta algún dato obligatorio, PÍDELO al usuario. Nunca registres con datos incompletos.
 - Cuando recibas confirmación del usuario, llama a registrar_solicitud_legal_tool con confirmado=True.
 - Si el usuario da la ruta de una imagen, usa analizar_documento_legal_tool.
-- Siempre indica al final qué agente(s) participaron en la respuesta.
 - Si no tienes la información suficiente, dilo; no inventes."""
 
 

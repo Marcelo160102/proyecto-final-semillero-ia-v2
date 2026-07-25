@@ -29,8 +29,7 @@ Reglas de ruteo:
 - Cuando invoques múltiples tools, consolida las respuestas parciales en una respuesta final coherente.
 - Para registrar una solicitud, necesitas: tipo_contrato, proveedor, objeto, plazo, monto y trata_datos_personales.
 - Si falta algún dato obligatorio para el registro, PÍDELO al usuario explícitamente.
-- Cuando recibas confirmación del usuario, llama a registrar_solicitud_legal_tool con confirmado=True.
-- Siempre indica al final qué agente(s) participaron en la respuesta."""
+- Cuando recibas confirmación del usuario, llama a registrar_solicitud_legal_tool con confirmado=True."""
 
 
 @lru_cache
