@@ -1,6 +1,6 @@
 services:
   phoenix:
-    image: ghcr.io/arize-ai/phoenix:latest
+    image: arizephoenix/phoenix:latest
     ports:
       - "6006:6006"
       - "4317:4317"
