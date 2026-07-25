@@ -1,6 +1,6 @@
 services:
   chromadb:
-    image: ghcr.io/chroma-core/chroma:1.5.9
+    image: chromadb/chroma:latest
     ports:
       - "8000:8000"
     volumes:
@@ -10,14 +10,6 @@ services:
       - PERSIST_DIRECTORY=/chroma/chroma
       - ANONYMIZED_TELEMETRY=FALSE
 
-  phoenix:
-    image: ghcr.io/arize-ai/phoenix:latest
-    ports:
-      - "6006:6006"
-      - "4317:4317"
-    volumes:
-      - phoenix_data:/data
-
   app:
     build: .
     ports:
@@ -26,13 +18,10 @@ services:
       - .env
     environment:
       - CHROMA_HOST=chromadb
-      - PHOENIX_HOST=phoenix
     volumes:
       - .:/app
     depends_on:
       - chromadb
-      - phoenix
 
 volumes:
   chroma_data:
-  phoenix_data:
