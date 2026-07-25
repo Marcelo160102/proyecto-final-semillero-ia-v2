@@ -1,0 +1,17 @@
+services:
+  phoenix:
+    image: ghcr.io/arize-ai/phoenix:latest
+    ports:
+      - "6006:6006"
+      - "4317:4317"
+    volumes:
+      - phoenix_data:/data
+
+  app:
+    depends_on:
+      - phoenix
+    environment:
+      - PHOENIX_HOST=phoenix
+
+volumes:
+  phoenix_data:
