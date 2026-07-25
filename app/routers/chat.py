@@ -26,7 +26,7 @@ async def pagina_chat(request: Request):
         historial = result.scalars().all()
 
     return templates.TemplateResponse(
-        request, "index.html", {"historial": historial}
+        request, "index.html", {"historial": historial, "seccion_activa": "chat"}
     )
 
 

@@ -22,5 +22,5 @@ async def pagina_registros(request: Request):
         )
 
     return templates.TemplateResponse(
-        request, "registros.html", {"registros": registros}
+        request, "registros.html", {"registros": registros, "seccion_activa": "registros"}
     )

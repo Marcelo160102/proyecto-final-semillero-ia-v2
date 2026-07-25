@@ -18,8 +18,8 @@
             </div>
 
             <nav class="sidebar-nav">
-                <a href="/" class="nav-link active">💬 Chat Legal</a>
-                <a href="/registros" class="nav-link">📋 Solicitudes</a>
+                <a href="/" class="nav-link {{ 'active' if seccion_activa == 'chat' else '' }}">💬 Chat Legal</a>
+                <a href="/registros" class="nav-link {{ 'active' if seccion_activa == 'registros' else '' }}">📋 Solicitudes</a>
             </nav>
 
             <div class="sidebar-section">
