@@ -1,6 +1,6 @@
 # Mesa de Ayuda IA para el Departamento Legal — Patito S.A. v2
 
-**Grupo FactorIA** | Semillero Final
+**Grupo FactorIA** | Semillero IA
 
 | Integrantes |
 | :--- |
@@ -93,10 +93,11 @@ Capas transversales:
        ↓
 2. Configurar .env con GOOGLE_API_KEY
        ↓
-3. docker compose up --build
+3. docker compose -f docker-compose.yml -f docker-compose.phoenix.yml up --build
    (indexacion automatica al primer arranque)
        ↓
 4. Abrir http://localhost:8080
+         http://localhost:6006
 ```
 
 ---
@@ -222,9 +223,9 @@ docker compose -f docker-compose.yml -f docker-compose.phoenix.yml down -v
 - Quiero registrar una solicitud de revision de un contrato de confidencialidad con el proveedor DataCorp por un monto de $15,000 por 12 meses. No involucra tratamiento de datos.
 
 **Analisis de imagen:**
-- Subir una imagen de un documento legal y escribir "Analiza este documento legal"
+- Subir una imagen de un documento legal y escribir "Analiza este documento legal" (ruta de imagen demo: img/contrato_demo.png)
 
-**Fuera de alcance (debe responder "No tengo esa informacion"):**
+**Fuera de alcance (debe responder "No encontré información suficiente en la base documental proporcionada"):**
 - ¿Cual es la capital de Francia?
 
 ---
@@ -301,7 +302,7 @@ proyecto-final-semillero-ia-v2/
 | **Cuota de API de Google Gemini** | Alto | Modelo `flash-lite` tiene costos bajos; Phoenix trackea uso por consulta |
 | **Alucinaciones del LLM** | Alto | Cada agente RAG responde SOLO desde su base documental; prompts con instrucciones estrictas |
 | **Inyeccion de prompts** | Medio | System prompt hardening con reglas anti-cambio de rol |
-| **Documentos fuera de alcance** | Medio | Agentes responden "No tengo esa informacion" cuando la consulta no esta en sus bases |
+| **Documentos fuera de alcance** | Medio | Agentes responden "No encontré información suficiente en la base documental proporcionada" cuando la consulta no esta en sus bases |
 | **Latencia de la API** | Bajo | Modelo `flash-lite` es ultrarrápido; chunking por seccion reduce contexto |
 | **Perdida de memoria entre sesiones** | Bajo | `InMemorySaver` mantiene contexto dentro de la sesion; se pierde al cerrar |
 | **Dependencia de conexion a internet** | Alto | Gemini, ChromaDB y Phoenix requieren conexion |
@@ -341,8 +342,39 @@ proyecto-final-semillero-ia-v2/
 | Baja | Timestamp en cada mensaje del chat | Pendiente |
 | Baja | Boton "Copiar respuesta" en mensajes del agente | Pendiente |
 | Baja | md_basico mejorado (listas, enlaces, parrafos) | Pendiente |
-| Baja | Validacion de tamano/tipo de archivo subido | Pendiente |
-| Baja | Diseno responsive para moviles (sidebar colapsable) | Pendiente |
+| Baja | Validacion de tamaño/tipo de archivo subido | Pendiente |
+| Baja | Diseño responsive para moviles (sidebar colapsable) | Pendiente |
+| Media | **Permisos por documento/agente** | Pendiente |
+| Media | **Monitoreo de calidad y costos** | Pendiente |
+| Media | **Sanitización de datos sensibles en UI** | Pendiente |
+
+---
+
+## Decisiones Técnicas
+
+### 1. Gemini como proveedor único gemelo
+LLM y embeddings con Google Gemini: una sola API Key, coherencia semántica entre vectorización y generación.
+
+### 2. Chunking por sección numerada
+Los documentos tienen estructura `1.`, `2.`, `3.`. El chunking por cabeceras preserva la unidad semántica de cada bloque legal. Cada chunk referencia su sección y archivo fuente (`embedding_service.py:chunkear_por_seccion`).
+
+### 3. ChromaDB con 3 colecciones independientes
+Aislamiento semántico total: una pregunta sobre contratos nunca recupera chunks de datos personales. Métrica coseno para similitud semántica. Cada agente RAG consulta solo su colección.
+
+### 4. Orquestador con create_react_agent (LangGraph)
+Ruteo automático por tema, invocación multi-agente en consultas mixtas, memoria multi-turno con InMemorySaver. Trazabilidad con `_extraer_trazas()`.
+
+### 5. Agente de acción con control de flujo 3 niveles
+Validación → Confirmación → Persistencia. Nunca escribe sin `confirmado=True`. ID único LEG-XXXX.
+
+### 6. Observabilidad con Phoenix
+OTLP HTTP sobre `BatchSpanProcessor`. Sin healthcheck TCP — el buffer interno maneja la indisponibilidad temporal de Phoenix.
+
+### 7. Indexación automática en startup
+`verificar_indexacion()` detecta colecciones faltantes o vacías y las indexa automáticamente al arrancar.
+
+### 8. Seguridad: System prompt hardening
+Reglas anti-inyección: no cambiar de rol, no revelar instrucciones internas, responder solo sobre temas legales.
 
 ---
 

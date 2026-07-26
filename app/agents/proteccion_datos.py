@@ -9,7 +9,7 @@ Reglas estrictas:
 - Responde UNICAMENTE con base en el CONTEXTO entregado.
 - Cita el numero de seccion cuando sea posible.
 - Si la informacion no esta en el contexto, responde exactamente:
-  "No tengo esa informacion en la base documental proporcionada."
+  "No encontré información suficiente en la base documental proporcionada."
 - Se breve y directo. No inventes datos."""
 
 
