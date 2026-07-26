@@ -64,81 +64,104 @@ Sistema de inteligencia artificial para el departamento legal de **Patito S.A.**
 
 Capas transversales:
   - Observabilidad: Phoenix (http://localhost:6006) + OpenTelemetry
-  - Evaluación: LLM-as-Judge con rúbrica legal (app/evaluacion.py)
-  - Seguridad: System prompt hardening anti-inyección (app/hardening.py)
+  - Evaluacion: LLM-as-Judge con rubrica legal (app/evaluacion.py)
+  - Seguridad: System prompt hardening anti-inyeccion (app/hardening.py)
 ```
 
 ### Componentes Principales
 
-| Capa | Componente | Tecnología |
+| Capa | Componente | Tecnologia |
 |------|-----------|------------|
 | **Frontend** | Jinja2 + HTMX + CSS | FastAPI |
 | **Orquestador** | `create_react_agent` + `InMemorySaver` | LangChain + LangGraph |
 | **Agentes RAG** | 3 agentes especializados (Contratos, Datos, Cumplimiento) | LangChain Retriever |
-| **Base vectorial** | 3 colecciones Chroma independientes (métrica coseno) | ChromaDB |
+| **Base vectorial** | 3 colecciones Chroma independientes (metrica coseno) | ChromaDB |
 | **Embeddings** | `gemini-embedding-2-preview` | Google Generative AI |
-| **LLM** | `gemini-3.1-flash-lite` (texto + imágenes) | Google Generative AI |
-| **Visión** | Análisis de documentos legales (imagen → Gemini) | LangChain + Gemini |
-| **Acción** | Registro de solicitudes con validación y confirmación | SQLAlchemy + SQLite |
-| **Observabilidad** | Tracing automático de cada invoke | Arize Phoenix + OTel |
-| **Evaluación** | Juez LLM con rúbrica legal | Gemini (temperatura 0) |
+| **LLM** | `gemini-3.1-flash-lite` (texto + imagenes) | Google Generative AI |
+| **Vision** | Analisis de documentos legales (imagen → Gemini) | LangChain + Gemini |
+| **Accion** | Registro de solicitudes con validacion y confirmacion | SQLAlchemy + SQLite |
+| **Observabilidad** | Tracing automatico de cada invoke | Arize Phoenix + OTel |
+| **Evaluacion** | Juez LLM con rubrica legal | Gemini (temperatura 0) |
 | **Despliegue** | Docker Compose | Contenedores |
 
 ---
 
-## Flujo de Ejecución
+## Flujo de Ejecucion
 
 ```
-1. Clonar repositorio
+1. Descargar el repositorio (git clone o ZIP)
        ↓
 2. Configurar .env con GOOGLE_API_KEY
        ↓
-3. docker compose up --build  (sin Phoenix)
-   O docker compose -f docker-compose.yml -f docker-compose.phoenix.yml up --build
+3. docker compose up --build
+   (indexacion automatica al primer arranque)
        ↓
-4. Indexar documentos en ChromaDB:
-   docker compose exec app python scripts/indexar.py
-       ↓
-5. Abrir http://localhost:8080 (App)
-   O http://localhost:6006  (Phoenix)
+4. Abrir http://localhost:8080
 ```
 
 ---
 
-## Instrucciones de Ejecución
+## Instrucciones de Ejecucion
 
 ### Requisitos Previos
 
-- **Docker** (Engine 24+ o Docker Desktop)
+- **Docker** (Engine 24+ en Linux, Docker Desktop en Windows)
 - **docker compose** plugin (incluido en Docker Desktop / Docker Engine)
 - **API Key de Google Gemini** (gratuita en [Google AI Studio](https://aistudio.google.com/apikey))
 
-### Paso 1 — Clonar el repositorio
+---
+
+### Paso 1 — Descargar el proyecto
+
+**Opcion A — git clone (Linux / Windows con Git instalado):**
 
 ```bash
 git clone https://github.com/Marcelo_CF/proyecto-final-semillero-ia-v2.git
 cd proyecto-final-semillero-ia-v2
 ```
 
+**Opcion B — Descargar ZIP (Windows / cualquier sistema):**
+
+1. Ir a https://github.com/Marcelo_CF/proyecto-final-semillero-ia-v2
+2. Click en boton **"Code"** → **"Download ZIP"**
+3. Extraer la carpeta en `C:\proyecto-final-semillero-ia-v2` (Windows)
+   o en `/home/tu_usuario/proyecto-final-semillero-ia-v2` (Linux)
+
+---
+
 ### Paso 2 — Configurar la API Key
 
-Copia el archivo de ejemplo y edítalo con tu API Key:
+Copia el archivo de ejemplo y editalo con tu API Key de Gemini:
 
+**Linux / macOS:**
 ```bash
 cp .env.example .env
+nano .env   # o cualquier editor
 ```
 
-Edita `.env` y pega tu API Key de Gemini:
+**Windows (PowerShell):**
+```powershell
+copy .env.example .env
+notepad .env   # Bloc de notas / VS Code
+```
+
+Edita `.env` y pega tu API Key:
 
 ```
 GOOGLE_API_KEY=tu_api_key_aqui
 ```
 
+---
+
 ### Paso 3 — Ejecutar con Docker
 
-**Sin Phoenix (recomendado para inicio rápido):**
+**Sin Phoenix (recomendado para inicio rapido):**
 
 ```bash
+# Linux:
+docker compose up --build
+
+# Windows (PowerShell):
 docker compose up --build
 ```
 
@@ -148,80 +171,61 @@ docker compose up --build
 docker compose -f docker-compose.yml -f docker-compose.phoenix.yml up --build
 ```
 
-> La imagen de Phoenix (`arizephoenix/phoenix:latest`) es pública en Docker Hub — no requiere autenticación.
+> La imagen de Phoenix (`arizephoenix/phoenix:latest`) es publica en Docker Hub — no requiere autenticacion.
 
-### Paso 4 — Indexar los documentos en ChromaDB
+> Al primer arranque, el sistema indexa automaticamente los documentos en ChromaDB (proceso de ~30 segundos).
 
-Con los contenedores corriendo, ejecuta el script de indexación:
+---
 
-```bash
-docker compose exec app python scripts/indexar.py
-```
-
-Esto carga los 3 documentos de `data/` en colecciones separadas de ChromaDB (contratos, proteccion_datos, cumplimiento).
-
-### Paso 5 — Abrir la aplicación
+### Paso 4 — Abrir la aplicacion
 
 | Servicio | URL |
 |----------|-----|
 | App | http://localhost:8080 |
 | Phoenix | http://localhost:6006 (solo si usas el override) |
 
-### Paso 6 — Uso del chat
+---
 
-- Escribe consultas legales sobre contratos, protección de datos o cumplimiento
-- Adjunta imágenes de documentos legales para análisis multimodal
-- Registra solicitudes de revisión/elaboración de contratos (el sistema valida datos y pide confirmación)
-- El historial y las solicitudes se persisten en SQLite
-
-### Paso 7 — Detener y limpiar
+### Paso 5 — Detener y limpiar
 
 ```bash
 # Detener contenedores (conserva datos)
 docker compose stop
 
-# Detener y eliminar contenedores + volúmenes (borra todo)
+# Detener y eliminar contenedores + volumenes (borra todo)
 docker compose -f docker-compose.yml -f docker-compose.phoenix.yml down -v
 ```
 
 ---
 
-## Decisiones Técnicas
+### Paso 6 — Probar el sistema con consultas de ejemplo
 
-### 1. Gemini como proveedor único
+**Agente de Contratos:**
+- ¿Que clausulas minimas debe tener un contrato de prestacion de servicios?
+- ¿Cuales son los tipos de contrato mas usados?
+- ¿Como es el proceso de revision y firma de un contrato?
 
-Se utiliza **Google Gemini** tanto para el LLM como para los embeddings, simplificando la configuración con una sola API Key.
+**Agente de Proteccion de Datos:**
+- ¿Cuales son los derechos ARCO?
+- ¿Por cuanto tiempo se conservan los datos personales despues de cancelar un servicio?
+- ¿Que hacer en caso de una violacion de seguridad?
 
-- **LLM:** `gemini-3.1-flash-lite` — modelo ultraligero y multimodal
-- **Embeddings:** `gemini-embedding-2-preview` — representación vectorial precisa
+**Agente de Cumplimiento:**
+- ¿Cual es el limite maximo para aceptar regalos?
+- ¿Como funciona el canal de denuncias?
+- ¿Que principios rigen el codigo de etica?
 
-### 2. Chunking por sección numerada
+**Multi-topico (varios agentes):**
+- Necesito redactar un contrato de servicios para un proveedor que tratara datos personales. ¿Que clausulas debe incluir y que requisitos de proteccion de datos debo cumplir?
 
-Los documentos legales tienen estructura numerada (`1.`, `2.`, `3.`...). Cortar por secciones preserva la unidad semántica de cada bloque. Cada chunk mantiene referencia a su número de sección y archivo fuente.
+**Registrar solicitud legal:**
+- Quiero registrar una solicitud de revision de un contrato de confidencialidad con el proveedor DataCorp por un monto de $15,000 por 12 meses. No involucra tratamiento de datos.
 
-### 3. ChromaDB con 3 colecciones independientes
+**Analisis de imagen:**
+- Subir una imagen de un documento legal y escribir "Analiza este documento legal"
 
-Cada dominio legal tiene su propia colección Chroma. Esto garantiza aislamiento semántico y especialización de cada agente RAG. Se usa métrica coseno para similitud semántica.
-
-### 4. Orquestador con create_react_agent
-
-Se usa `create_react_agent` de LangChain con `InMemorySaver` para ruteo automático, invocación multi-agente en consultas mixtas, memoria multi-turno y trazabilidad.
-
-### 5. Agente de acción con control de flujo
-
-Registro de solicitudes en 3 niveles: validación de campos obligatorios, confirmación con resumen y persistencia solo con `confirmado=True`.
-
-### 6. Observabilidad con Phoenix
-
-Phoenix captura automáticamente cada invocación al orquestador. Se inicializa en el `lifespan` de FastAPI usando OpenTelemetry + LangChainInstrumentor. No requiere healthcheck TCP — el `BatchSpanProcessor` bufferiza los spans internamente.
-
-### 7. Frontend con Jinja2 + HTMX
-
-Sin framework JS pesado. HTMX maneja la interactividad (envío de formularios, actualización del historial, scroll automático) con atributos HTML. El indicador de carga usa la clase `.htmx-request` que HTMX añade automáticamente durante las peticiones.
-
-### 8. Seguridad: System prompt hardening
-
-Reglas anti-inyección en el system prompt: no cambiar de rol, no revelar instrucciones internas, responder únicamente sobre temas legales.
+**Fuera de alcance (debe responder "No tengo esa informacion"):**
+- ¿Cual es la capital de Francia?
 
 ---
 
@@ -232,14 +236,14 @@ proyecto-final-semillero-ia-v2/
 ├── app/
 │   ├── __init__.py
 │   ├── main.py                  # FastAPI app + lifespan
-│   ├── config.py                # Configuración vía .env
+│   ├── config.py                # Configuracion via .env
 │   ├── database.py              # SQLAlchemy async engine
 │   ├── models.py                # ORM: Consulta, SolicitudLegal
 │   ├── schemas.py               # Pydantic schemas
 │   ├── templating.py            # Jinja2 + filtros personalizados
 │   ├── phoenix_setup.py         # OpenTelemetry + LangChainInstrumentor
 │   ├── hardening.py             # Orquestador con system prompt hardening
-│   ├── evaluacion.py            # LLM-as-Judge con rúbrica legal
+│   ├── evaluacion.py            # LLM-as-Judge con rubrica legal
 │   ├── agents/
 │   │   ├── __init__.py
 │   │   ├── base.py              # responder_rag + extraer_texto
@@ -248,7 +252,7 @@ proyecto-final-semillero-ia-v2/
 │   │   ├── contratos.py         # RAG especializado en contratos
 │   │   ├── proteccion_datos.py  # RAG especializado en datos personales
 │   │   ├── cumplimiento.py      # RAG especializado en cumplimiento
-│   │   ├── multimodal.py        # Análisis de imágenes con Gemini
+│   │   ├── multimodal.py        # Analisis de imagenes con Gemini
 │   │   └── accion.py            # Registro de solicitudes legales
 │   ├── routers/
 │   │   ├── __init__.py
@@ -259,10 +263,10 @@ proyecto-final-semillero-ia-v2/
 │   │   ├── __init__.py
 │   │   ├── llm_service.py       # Singleton LLM + Embeddings
 │   │   ├── chroma_service.py    # Cliente ChromaDB (HTTP / Persistent)
-│   │   └── embedding_service.py # Indexación de documentos
+│   │   └── embedding_service.py # Indexacion de documentos
 │   ├── templates/
 │   │   ├── base.html            # Layout: sidebar + main
-│   │   ├── index.html           # Página de chat
+│   │   ├── index.html           # Pagina de chat
 │   │   ├── registros.html       # Tabla de solicitudes
 │   │   └── fragments/
 │   │       ├── mensaje_chat.html       # Burbuja completa (historial)
@@ -275,12 +279,12 @@ proyecto-final-semillero-ia-v2/
 │   ├── 02_Proteccion_Datos.txt
 │   └── 03_Cumplimiento_Etica.txt
 ├── scripts/
-│   └── indexar.py               # Script de indexación
+│   └── indexar.py               # Script de indexacion
 ├── chroma_data/                 # Persistencia local de ChromaDB
 ├── docs/
-│   └── README.md                # Documentación original del notebook
-├── solicitudes.db               # SQLite (se crea automáticamente)
-├── .env.example                 # Template de configuración
+│   └── README.md                # Documentacion original del notebook
+├── solicitudes.db               # SQLite (se crea automaticamente)
+├── .env.example                 # Template de configuracion
 ├── docker-compose.yml           # App + ChromaDB
 ├── docker-compose.phoenix.yml   # Override con Phoenix
 ├── Dockerfile
@@ -292,22 +296,22 @@ proyecto-final-semillero-ia-v2/
 
 ## Riesgos y Limitaciones
 
-| Riesgo | Impacto | Mitigación |
+| Riesgo | Impacto | Mitigacion |
 |--------|---------|------------|
 | **Cuota de API de Google Gemini** | Alto | Modelo `flash-lite` tiene costos bajos; Phoenix trackea uso por consulta |
 | **Alucinaciones del LLM** | Alto | Cada agente RAG responde SOLO desde su base documental; prompts con instrucciones estrictas |
-| **Inyección de prompts** | Medio | System prompt hardening con reglas anti-cambio de rol |
-| **Documentos fuera de alcance** | Medio | Agentes responden "No tengo esa información" cuando la consulta no está en sus bases |
-| **Latencia de la API** | Bajo | Modelo `flash-lite` es ultrarrápido; chunking por sección reduce contexto |
-| **Pérdida de memoria entre sesiones** | Bajo | `InMemorySaver` mantiene contexto dentro de la sesión; se pierde al cerrar |
-| **Dependencia de conexión a internet** | Alto | Gemini, ChromaDB y Phoenix requieren conexión |
-| **Tamaño de documentos** | Bajo | Chunking por sección maneja documentos de cualquier tamaño |
+| **Inyeccion de prompts** | Medio | System prompt hardening con reglas anti-cambio de rol |
+| **Documentos fuera de alcance** | Medio | Agentes responden "No tengo esa informacion" cuando la consulta no esta en sus bases |
+| **Latencia de la API** | Bajo | Modelo `flash-lite` es ultrarrápido; chunking por seccion reduce contexto |
+| **Perdida de memoria entre sesiones** | Bajo | `InMemorySaver` mantiene contexto dentro de la sesion; se pierde al cerrar |
+| **Dependencia de conexion a internet** | Alto | Gemini, ChromaDB y Phoenix requieren conexion |
+| **Tamano de documentos** | Bajo | Chunking por seccion maneja documentos de cualquier tamano |
 
 ---
 
-## Stack Tecnológico
+## Stack Tecnologico
 
-| Tecnología | Versión | Uso |
+| Tecnologia | Version | Uso |
 |-----------|---------|-----|
 | Python | 3.12 (imagen Docker: 3.12-slim) | Lenguaje principal |
 | FastAPI | >=0.115.0 | Framework web |
@@ -316,16 +320,32 @@ proyecto-final-semillero-ia-v2/
 | HTMX | 2.0.4 | Interactividad frontend |
 | LangChain | >=1.3.0 | Framework de agentes |
 | LangGraph | >=1.0.0 | Checkpointing y memoria |
-| Google Gemini | `gemini-3.1-flash-lite` | LLM (texto + imágenes) |
-| Google Gemini | `gemini-embedding-2-preview` | Generación de embeddings |
+| Google Gemini | `gemini-3.1-flash-lite` | LLM (texto + imagenes) |
+| Google Gemini | `gemini-embedding-2-preview` | Generacion de embeddings |
 | ChromaDB | >=0.5.0 | Base de datos vectorial |
-| SQLAlchemy | >=2.0.0 | ORM asíncrono |
+| SQLAlchemy | >=2.0.0 | ORM asincrono |
 | Arize Phoenix | >=13.21.0 | Observabilidad y tracing |
-| OpenInference | >=0.1.0 | Instrumentación LangChain |
+| OpenInference | >=0.1.0 | Instrumentacion LangChain |
 | Docker | 24+ | Contenedores |
+
+---
+
+## Mejoras Futuras
+
+| Prioridad | Mejora | Estado |
+|-----------|--------|--------|
+| Alta | Manejo de errores en chat (mostrar mensaje amigable si falla) | Pendiente |
+| Media | Historial clickable (cargar conversacion anterior desde el sidebar) | Pendiente |
+| Media | Boton "Nuevo chat" sin borrar historial | Pendiente |
+| Media | Limpiar imagenes del servidor al borrar historial | Pendiente |
+| Baja | Timestamp en cada mensaje del chat | Pendiente |
+| Baja | Boton "Copiar respuesta" en mensajes del agente | Pendiente |
+| Baja | md_basico mejorado (listas, enlaces, parrafos) | Pendiente |
+| Baja | Validacion de tamano/tipo de archivo subido | Pendiente |
+| Baja | Diseno responsive para moviles (sidebar colapsable) | Pendiente |
 
 ---
 
 ## Licencia
 
-Proyecto académico — Semillero FactorIA
+Proyecto academico — Semillero FactorIA
