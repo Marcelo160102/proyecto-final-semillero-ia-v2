@@ -58,13 +58,20 @@
         var pregunta = input.value.trim();
         if (!pregunta) return;
 
+        var fileInput = this.querySelector('input[type="file"]');
+        var fileName = fileInput && fileInput.files[0] ? fileInput.files[0].name : '';
+
         var area = document.getElementById('chat-area');
         var empty = document.getElementById('chat-empty');
         if (empty) empty.remove();
 
         var userDiv = document.createElement('div');
         userDiv.className = 'msg-row user';
-        userDiv.innerHTML = '<div class="msg-bubble user-bubble">' + pregunta.replace(/</g, '&lt;') + '</div>';
+        var userHtml = pregunta.replace(/</g, '&lt;');
+        if (fileName) {
+            userHtml = '📷 <em>' + fileName.replace(/</g, '&lt;') + '</em><br>' + userHtml;
+        }
+        userDiv.innerHTML = '<div class="msg-bubble user-bubble">' + userHtml + '</div>';
         area.appendChild(userDiv);
 
         var loadDiv = document.createElement('div');

@@ -1,0 +1,29 @@
+<div class="msg-row agent">
+    <div class="msg-bubble agent-bubble">
+        <div class="msg-sender">⚖️ Asistente Legal</div>
+        {% if imagen_url %}
+        <img src="{{ imagen_url }}" class="chat-img" alt="Documento adjunto">
+        {% endif %}
+        <div class="msg-text">{{ respuesta.respuesta | md_basico | safe }}</div>
+
+        {% if respuesta.agentes %}
+        <details class="trace-details">
+            <summary class="trace-summary">
+                🛠️ Agentes: {{ respuesta.agentes | join(", ") }}
+            </summary>
+            <div class="trace-content">
+                {% for t in respuesta.trazas %}
+                <div class="trace-item trace-{{ t.tipo }}">
+                    <span class="trace-tool">{{ t.tool }}</span>
+                    {% if t.tipo == "accion" %}
+                        <span class="trace-args">({{ t.args | tojson_pretty }})</span>
+                    {% else %}
+                        <span class="trace-preview">{{ t.preview }}</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </details>
+        {% endif %}
+    </div>
+</div>

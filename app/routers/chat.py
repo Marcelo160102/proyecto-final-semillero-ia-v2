@@ -70,7 +70,7 @@ async def enviar_consulta(
 
     response = templates.TemplateResponse(
         request,
-        "fragments/mensaje_chat.html",
+        "fragments/respuesta_agente.html",
         contexto,
     )
     response.headers["HX-Trigger"] = "history-updated"
