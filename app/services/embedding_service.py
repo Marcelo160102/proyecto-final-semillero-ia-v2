@@ -7,7 +7,9 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 from chromadb.errors import NotFoundError
 
+from app.config import obtener_config
 from app.services.chroma_service import _obtener_cliente
+from app.services.llm_service import obtener_embeddings
 
 
 def cargar_documento(ruta: str) -> str:
@@ -63,6 +65,46 @@ def indexar_documento(
     print(f"  ✅ {vectorstore._collection.count()} chunks indexados en '{coleccion}'")
     time.sleep(pausa_seg)
     return vectorstore
+
+
+COLECCIONES_REQUERIDAS = ["contratos", "proteccion_datos", "cumplimiento"]
+
+
+def verificar_indexacion():
+    import logging
+
+    config = obtener_config()
+    if not config.google_api_key:
+        logging.warning("GOOGLE_API_KEY no configurada, omitiendo indexacion")
+        return
+
+    try:
+        client = _obtener_cliente()
+        existentes = {c.name for c in client.list_collections()}
+
+        faltan = [c for c in COLECCIONES_REQUERIDAS if c not in existentes]
+        vacias = []
+        for nombre in COLECCIONES_REQUERIDAS:
+            if nombre in existentes:
+                col = client.get_collection(nombre)
+                if col.count() == 0:
+                    vacias.append(nombre)
+
+        if not faltan and not vacias:
+            logging.info("Colecciones ChromaDB ya indexadas")
+            return
+
+        if faltan:
+            logging.info("Colecciones faltantes: %s", ", ".join(faltan))
+        if vacias:
+            logging.info("Colecciones vacias: %s", ", ".join(vacias))
+
+        logging.info("Indexando documentos automaticamente...")
+        embeddings = obtener_embeddings()
+        indexar_todos(embeddings)
+        logging.info("Indexacion automatica completada")
+    except Exception as e:
+        logging.warning("No se pudo verificar/indexar ChromaDB: %s", e)
 
 
 DOCS = [

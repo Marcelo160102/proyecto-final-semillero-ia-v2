@@ -21,6 +21,14 @@ async def lifespan(_app: FastAPI):
         import logging
 
         logging.warning("Phoenix no disponible: %s", exc)
+    try:
+        from app.services.embedding_service import verificar_indexacion
+
+        verificar_indexacion()
+    except Exception as exc:
+        import logging
+
+        logging.warning("Indexacion automatica fallo: %s", exc)
     yield
     await engine.dispose()
 
