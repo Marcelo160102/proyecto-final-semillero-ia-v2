@@ -70,27 +70,28 @@ def registrar_solicitud_legal(
     if not confirmado:
         _pendiente = datos
         resumen = (
-            f"Tipo: {tipo_contrato} | Proveedor: {proveedor} | "
-            f"Objeto: {objeto} | Plazo: {plazo} | "
-            f"Monto: {monto} | Trata datos: {trata_datos_personales}"
+            f"Tipo: {datos['tipo_contrato']} | Proveedor: {datos['proveedor']} | "
+            f"Objeto: {datos['objeto']} | Plazo: {datos['plazo']} | "
+            f"Monto: {datos['monto']} | Trata datos: {datos['trata_datos_personales']}"
         )
         return (
-            f"CONFIRMACIÓN REQUERIDA. Estos son los datos:\n"
+            f"CONFIRMACION REQUERIDA. Estos son los datos:\n"
             f"{resumen}\n"
-            "Responde 'sí' para confirmar el registro."
+            "Responde 'si' para confirmar el registro."
         )
 
+    d = datos
     rid = _siguiente_id_solicitud()
     with Session(sync_engine) as session:
         solicitud = SolicitudLegal(
             identificador=rid,
-            tipo_contrato=tipo_contrato,
-            proveedor=proveedor,
-            objeto=objeto,
-            plazo=plazo,
-            monto=monto,
-            trata_datos=trata_datos_personales.lower()
-            in ("sí", "si", "yes", "true"),
+            tipo_contrato=d["tipo_contrato"],
+            proveedor=d["proveedor"],
+            objeto=d["objeto"],
+            plazo=d["plazo"],
+            monto=d["monto"],
+            trata_datos=d["trata_datos_personales"].lower()
+            in ("si", "sí", "yes", "true"),
             fecha_creacion=datetime.now(),
         )
         session.add(solicitud)
