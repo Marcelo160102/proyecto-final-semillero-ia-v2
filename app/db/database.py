@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.config import obtener_config
+from app.config.config import obtener_config
 
 config = obtener_config()
 engine = create_async_engine(config.database_url, echo=False)

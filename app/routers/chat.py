@@ -7,8 +7,8 @@ from fastapi import APIRouter, File, Form, Request, UploadFile
 from sqlalchemy import delete, select
 
 from app.agents.orquestador import consultar
-from app.database import async_session
-from app.models import Consulta
+from app.db.database import async_session
+from app.db.models import Consulta
 from app.templating import templates
 
 router = APIRouter(tags=["chat"])

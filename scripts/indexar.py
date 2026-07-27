@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
-from app.config import obtener_config
+from app.config.config import obtener_config
 from app.services.embedding_service import indexar_todos
 
 

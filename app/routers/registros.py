@@ -2,8 +2,8 @@ from fastapi import APIRouter, Request
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from app.config import obtener_config
-from app.models import SolicitudLegal
+from app.config.config import obtener_config
+from app.db.models import SolicitudLegal
 from app.templating import templates
 
 router = APIRouter(tags=["registros"])

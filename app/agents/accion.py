@@ -3,8 +3,8 @@ from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from app.config import obtener_config
-from app.models import Base, SolicitudLegal
+from app.config.config import obtener_config
+from app.db.models import Base, SolicitudLegal
 
 config = obtener_config()
 

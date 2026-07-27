@@ -7,7 +7,7 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 from chromadb.errors import NotFoundError
 
-from app.config import obtener_config
+from app.config.config import obtener_config
 from app.services.chroma_service import _obtener_cliente
 from app.services.llm_service import obtener_embeddings
 

@@ -4,8 +4,8 @@ import os
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from app.database import engine
-from app.models import Base
+from app.db.database import engine
+from app.db.models import Base
 from app.routers import admin, chat, registros
 
 
@@ -14,7 +14,7 @@ async def lifespan(_app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     try:
-        from app.phoenix_setup import setup_phoenix
+        from app.monitoring.phoenix_setup import setup_phoenix
 
         setup_phoenix()
     except Exception as exc:

@@ -2,7 +2,7 @@ from functools import lru_cache
 
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 
-from app.config import obtener_config
+from app.config.config import obtener_config
 
 
 @lru_cache

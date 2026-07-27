@@ -2,7 +2,7 @@ import chromadb
 from langchain_chroma import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
-from app.config import obtener_config
+from app.config.config import obtener_config
 
 config = obtener_config()
 

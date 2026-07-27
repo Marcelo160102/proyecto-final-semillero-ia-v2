@@ -4,7 +4,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from openinference.instrumentation.langchain import LangChainInstrumentor
 
-from app.config import obtener_config
+from app.config.config import obtener_config
 
 
 def setup_phoenix():
