@@ -32,6 +32,7 @@ class Consulta(Base):
     respuesta: Mapped[str] = mapped_column(Text, nullable=False)
     agentes_participantes: Mapped[str] = mapped_column(Text, nullable=True)
     fuentes: Mapped[str] = mapped_column(Text, nullable=True)
+    evaluacion: Mapped[str | None] = mapped_column(Text, nullable=True)
     fecha_creacion: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )

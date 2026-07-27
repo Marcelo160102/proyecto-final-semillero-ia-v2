@@ -6,6 +6,16 @@
         {% endif %}
         <div class="msg-text">{{ respuesta.respuesta | md_basico | safe }}</div>
 
+        {% if respuesta.evaluacion and respuesta.evaluacion.puntaje_total %}
+        <div class="evaluacion" style="margin-top:8px;font-size:0.8em;color:#666;">
+            Evaluación: {{ respuesta.evaluacion.puntaje_total }}/5
+            (Precisión: {{ respuesta.evaluacion.precision }},
+            Completitud: {{ respuesta.evaluacion.completitud }},
+            Claridad: {{ respuesta.evaluacion.claridad }},
+            Seguridad: {{ respuesta.evaluacion.seguridad }})
+        </div>
+        {% endif %}
+
         {% if respuesta.agentes %}
         <details class="trace-details">
             <summary class="trace-summary">

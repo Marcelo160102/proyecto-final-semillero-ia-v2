@@ -3,16 +3,25 @@ import os
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+import sqlalchemy as sa
 
 from app.db.database import engine
 from app.db.models import Base
 from app.routers import admin, chat, registros
 
 
+def _migrar_evaluacion(conn):
+    try:
+        conn.execute(sa.text("ALTER TABLE consultas ADD COLUMN evaluacion TEXT"))
+    except Exception:
+        pass
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(_migrar_evaluacion)
     try:
         from app.monitoring.phoenix_setup import setup_phoenix
 

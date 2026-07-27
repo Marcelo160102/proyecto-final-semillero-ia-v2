@@ -7,6 +7,7 @@ from fastapi import APIRouter, File, Form, Request, UploadFile
 from sqlalchemy import delete, select
 
 from app.agents.orquestador import consultar
+from app.monitoring.evaluacion import evaluar_respuesta
 from app.db.database import async_session
 from app.db.models import Consulta
 from app.templating import templates
@@ -51,12 +52,19 @@ async def enviar_consulta(
     loop = asyncio.get_event_loop()
     resultado = await loop.run_in_executor(None, consultar, pregunta_final)
 
+    try:
+        evaluacion = evaluar_respuesta(pregunta, resultado["respuesta"])
+        resultado["evaluacion"] = evaluacion
+    except Exception:
+        resultado["evaluacion"] = None
+
     async with async_session() as session:
         consulta = Consulta(
             pregunta=pregunta,
             respuesta=resultado["respuesta"],
             agentes_participantes=json.dumps(resultado["agentes"], ensure_ascii=False),
             fuentes=json.dumps(resultado["trazas"], ensure_ascii=False),
+            evaluacion=json.dumps(resultado.get("evaluacion"), ensure_ascii=False) if resultado.get("evaluacion") else None,
         )
         session.add(consulta)
         await session.commit()
