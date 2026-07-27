@@ -178,6 +178,48 @@ docker --version
 
 ---
 
+### Sobre el uso de Docker
+
+**¿Por qué Docker?** El proyecto usa Docker Compose para orquestar la aplicación FastAPI + ChromaDB (servicio HTTP independiente) + Phoenix (opcional). Esto garantiza:
+
+- **Reproducibilidad:** mismo entorno en Windows, Linux o macOS sin instalar dependencias Python manualmente
+- **Aislamiento:** ChromaDB corre en su propio contenedor con persistencia en volúmenes, separado del proceso de la app
+- **Un solo comando:** `docker compose up --build` levanta todo
+
+**¿Se puede ejecutar sin Docker?**
+
+Sí. El proyecto es una aplicación Python estándar — Docker es el medio de empaquetado, no un requisito de la aplicación en sí.
+
+**Alternativa manual (sin Docker):**
+
+```bash
+# 1. Crear entorno virtual e instalar dependencias
+python3 -m venv .venv
+source .venv/bin/activate      # Linux/macOS
+# .venv\Scripts\activate       # Windows
+pip install -r requirements.txt
+
+# 2. Configurar .env con GOOGLE_API_KEY (igual que con Docker)
+
+# 3. Iniciar la aplicación
+uvicorn app.main:app --host 0.0.0.0 --port 8080
+```
+
+En este modo, ChromaDB usa su **cliente persistente local** (archivos en `chroma_data/`) en lugar del servidor HTTP. El código en `chroma_service.py` ya soporta ambos modos automáticamente. Phoenix no estaría disponible a menos que se instale y ejecute por separado.
+
+**Limitaciones del modo sin Docker:**
+
+| Aspecto | Con Docker | Sin Docker |
+|---------|-----------|------------|
+| ChromaDB | Servidor HTTP aislado (puerto 8000) | Modo embebido local (misma funcionalidad) |
+| Phoenix | Contenedor separado con override | Requiere instalación y ejecución manual |
+| Setup inicial | `docker compose up --build` | `pip install` + `uvicorn` |
+| Aislamiento | Contenedores independientes | Todo en un proceso |
+| Persistencia ChromaDB | Volumen Docker (`chroma_data`) | Directorio local (`chroma_data/`) |
+| Indexación automática | Funciona igual en ambos modos | Funciona igual |
+
+---
+
 ### Paso 1 — Descargar el proyecto
 
 **Opcion A — git clone (Linux / Windows con Git instalado):**
@@ -411,16 +453,18 @@ proyecto-final-semillero-ia-v2/
 
 ## Riesgos y Limitaciones
 
-| Riesgo | Impacto | Mitigacion |
+| Riesgo | Impacto | Mitigación |
 |--------|---------|------------|
-| **Cuota de API de Google Gemini** | Alto | Modelo `flash-lite` tiene costos bajos; Phoenix trackea uso por consulta |
-| **Alucinaciones del LLM** | Alto | Cada agente RAG responde SOLO desde su base documental; prompts con instrucciones estrictas |
-| **Inyeccion de prompts** | Medio | System prompt hardening con reglas anti-cambio de rol |
-| **Documentos fuera de alcance** | Medio | Agentes responden "No encontré información suficiente en la base documental proporcionada" cuando la consulta no esta en sus bases |
-| **Latencia de la API** | Bajo | Modelo `flash-lite` es ultrarrápido; chunking por seccion reduce contexto |
-| **Perdida de memoria entre sesiones** | Bajo | `InMemorySaver` mantiene contexto dentro de la sesion; se pierde al cerrar |
-| **Dependencia de conexion a internet** | Alto | Gemini, ChromaDB y Phoenix requieren conexion |
-| **Tamano de documentos** | Bajo | Chunking por seccion maneja documentos de cualquier tamano |
+| **Cuota de API de Google Gemini** | Alto | Modelo `flash-lite` cuesta ~$0.10/1M tokens input. Con uso moderado (~100 consultas/día) el costo es despreciable, pero uso intensivo puede generar cargos. No hay tracking automático de costos — la UI de Phoenix permite configurar precios manualmente, pero no alerta cuando se acerca a un límite. |
+| **Alucinaciones del LLM** | Alto | Cada agente RAG responde **SOLO** desde su base documental (prompt restringe explícitamente inventar normativa). Además, el evaluador LLM-as-Judge penaliza el criterio "Seguridad" si detecta información sin respaldo documental. Sin embargo, ninguna mitigación es 100% efectiva. |
+| **Inyección de prompts** | Medio | System prompt hardening con reglas anti-cambio de rol y anti-revelación de instrucciones. El orquestador rechaza explícitamente solicitudes de "ignora las instrucciones anteriores" o "actúa como otro sistema". |
+| **Documentos fuera de alcance** | Medio | Cada agente tiene un prompt que le ordena responder "No encontré información suficiente en la base documental proporcionada" si la pregunta no está en sus documentos (verificado en Paso 6.7). |
+| **Dependencia de conexión a internet** | Alto | Gemini API, ChromaDB (servicio HTTP) y Phoenix requieren conexión. Sin internet el sistema no funciona. No hay mitigación real — es una limitación arquitectónica. Una versión offline requeriría un LLM local (Ollama, Llama.cpp) y ChromaDB embebido. |
+| **ChromaDB o API Gemini no disponible** | Alto | Hay captura de excepciones en `chroma_service.py` y `base.py`. En `chat.py` se muestra un mensaje amigable ("El servicio de base de conocimiento no está disponible"). No hay reintentos automáticos ni degradación graceful. |
+| **Datos sensibles expuestos en Phoenix** | Medio | Phoenix captura el contenido completo de consultas, respuestas y argumentos de tools (ej. proveedor, monto). La UI de Phoenix (puerto 6006) no tiene autenticación por defecto. **Mitigación:** no exponer Phoenix en producción o implementar un filtro de campos sensibles antes de enviar el span. |
+| **Falsos positivos/negativos del evaluador LLM** | Medio | El LLM-as-Judge con Gemini puede puntuar incorrectamente: aprobar respuestas con alucinaciones o rechazar respuestas correctas. El evaluador usa temperatura 0 para máximo determinismo, pero sigue siendo un LLM — no hay validación humana del puntaje. |
+| **Jailbreak exitoso a pesar de hardening** | Medio | El hardening en el system prompt del orquestador reduce pero no elimina el riesgo de inyección. Un prompt adversarial bien diseñado podría engañar al sistema. El evaluador LLM-as-Judge incluye "Seguridad" como criterio de detección posterior. |
+| **Archivo de imagen inválido o malicioso** | Bajo | El input de tipo file acepta cualquier archivo. Una imagen corrupta o muy grande puede hacer fallar Gemini Vision o consumir memoria excesiva. Mitigación no implementada (pendiente como mejora futura). |
 
 ---
 
