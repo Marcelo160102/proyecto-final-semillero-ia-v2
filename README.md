@@ -65,7 +65,7 @@ Sistema de inteligencia artificial para el departamento legal de **Patito S.A.**
 Capas transversales:
   - Observabilidad: Phoenix (http://localhost:6006) + OpenTelemetry
   - Evaluacion: LLM-as-Judge con rubrica legal (app/evaluacion.py)
-  - Seguridad: System prompt hardening anti-inyeccion (app/hardening.py)
+  - Seguridad: System prompt hardening anti-inyeccion (app/agents/orquestador.py)
 ```
 
 ### Componentes Principales
@@ -243,7 +243,6 @@ proyecto-final-semillero-ia-v2/
 │   ├── schemas.py               # Pydantic schemas
 │   ├── templating.py            # Jinja2 + filtros personalizados
 │   ├── phoenix_setup.py         # OpenTelemetry + LangChainInstrumentor
-│   ├── hardening.py             # Orquestador con system prompt hardening
 │   ├── evaluacion.py            # LLM-as-Judge con rubrica legal
 │   ├── agents/
 │   │   ├── __init__.py
@@ -465,8 +464,8 @@ OTLP HTTP sobre `BatchSpanProcessor`. Sin healthcheck TCP — el buffer interno 
 ### 7. Indexación automática en startup
 `verificar_indexacion()` detecta colecciones faltantes o vacías y las indexa automáticamente al arrancar.
 
-### 8. Seguridad: System prompt hardening
-Reglas anti-inyección: no cambiar de rol, no revelar instrucciones internas, responder solo sobre temas legales.
+### 8. Seguridad: System prompt hardening integrado
+Reglas anti-inyección integradas directamente en `SYSTEM_PROMPT_ORQUESTADOR` (`app/agents/orquestador.py`): no simular legislación, no actuar como abogado, no revelar instrucciones internas, rechazar cambios de rol.
 
 ---
 
