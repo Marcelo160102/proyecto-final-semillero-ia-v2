@@ -92,6 +92,21 @@ Capas transversales:
 
 ---
 
+## Aplicación de Conceptos del Semillero
+
+Este proyecto aplica los conceptos clave aprendidos en el Semillero de Inteligencia Artificial:
+
+| Concepto del semillero | Implementación en el proyecto |
+|------------------------|-------------------------------|
+| **Agentes RAG con LangChain** | No se consume la API de Gemini directamente. Cada agente (`contratos.py`, `proteccion_datos.py`, `cumplimiento.py`) usa `LangChain RetrievalQA` con un retriever sobre ChromaDB, system prompt especializado y control de alcance ("no encontré información suficiente..."). |
+| **Orquestación con LangGraph** | `create_react_agent` enruta la consulta al agente correcto según el tema, permite invocación multi-agente en consultas mixtas, y mantiene memoria multi-turno con `InMemorySaver`. Sin LangGraph habría que implementar routing manual con if/elif. |
+| **Evaluación LLM-as-Judge** | Un segundo LLM (Gemini, temperatura 0) puntúa cada respuesta en 4 criterios legales. Patrón visto en las sesiones de monitoreo de calidad del semillero. |
+| **Separación de concerns** | Capas bien diferenciadas: `agents/` (lógica de agente), `services/` (embeddings, ChromaDB, LLM), `routers/` (HTTP), `db/` (modelos ORM). Cada capa es reemplazable independientemente. |
+| **Observabilidad con tracing** | Cada invocación del orquestador genera un trace completo en Arize Phoenix, permitiendo depurar qué tool se llamó, cuánto tardó y qué respuesta dio el LLM. |
+| **Hardening anti-inyección** | Reglas de seguridad integradas en el system prompt del orquestador, no como capa externa. Aprendido de las sesiones de seguridad del semillero. |
+
+---
+
 ## Flujo de Ejecucion
 
 ```
@@ -443,7 +458,7 @@ proyecto-final-semillero-ia-v2/
 | Baja | md_basico mejorado (listas, enlaces, parrafos) | Pendiente |
 | Baja | Validacion de tamaño/tipo de archivo subido | Pendiente |
 | Baja | Diseño responsive para moviles (sidebar colapsable) | Pendiente |
-| Media | **Sanitización de datos sensibles en UI** | Pendiente |
+| Media | Sanitización de datos sensibles en UI | Pendiente |
 
 ---
 
@@ -451,8 +466,19 @@ proyecto-final-semillero-ia-v2/
 
 **Modelo:** RBAC (Role-Based Access Control)
 
-**Tabla propuesta en SQLite:**
+#### Estructura de datos
 
+**Tabla `usuarios`:**
+```sql
+CREATE TABLE usuarios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    rol TEXT NOT NULL REFERENCES permisos_agente(rol)
+);
+```
+
+**Tabla `permisos_agente`:**
 ```sql
 CREATE TABLE permisos_agente (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -462,28 +488,65 @@ CREATE TABLE permisos_agente (
 );
 ```
 
-**Roles sugeridos:**
+#### Roles sugeridos
 
-| Rol | Colecciones accesibles |
-|-----|----------------------|
-| `legal` | contratos, cumplimiento |
-| `datos` | proteccion_datos |
-| `admin` | todas |
-| `consulta` | todas (solo lectura) |
+| Rol | Colecciones accesibles | Descripción |
+|-----|----------------------|-------------|
+| `legal` | contratos, cumplimiento | Abogados del área contractual y ética |
+| `datos` | proteccion_datos | Oficial de protección de datos |
+| `admin` | todas | Administradores del sistema |
+| `consulta` | todas (solo lectura) | Auditoría y supervisión |
 
-**Enforcement:** Decorador en las tools del orquestador que verifique el rol del usuario antes de ejecutar el retriever. El rol se obtendría de una tabla `usuarios` o variable de entorno.
+#### Flujo de autenticación propuesto
+
+1. El usuario ingresa con **username + password** en una página `/login`
+2. El servidor valida contra la tabla `usuarios` y establece una **sesión** (cookie firmada o JWT)
+3. El rol del usuario se almacena en la sesión y está disponible en cada request
+4. El sidebar del chat oculta/muestra agentes según el rol del usuario
+
+#### Enforcement: decorador en tools del orquestador
+
+```python
+from functools import wraps
+from flask import session  # o request.session
+
+def requiere_permiso(coleccion: str, permiso: str = "leer"):
+    def decorador(tool_func):
+        @wraps(tool_func)
+        async def wrapper(*args, **kwargs):
+            rol = session.get("rol", "consulta")
+            # verificar en BD: SELECT 1 FROM permisos_agente
+            # WHERE rol=? AND coleccion=? AND permiso IN (?, 'admin')
+            if not tiene_permiso(rol, coleccion, permiso):
+                return "No tienes permiso para acceder a esta información."
+            return await tool_func(*args, **kwargs)
+        return wrapper
+    return decorador
+```
+
+Luego se aplica a cada tool:
+```python
+@tool
+@requiere_permiso("contratos", "leer")
+async def consultar_contratos(pregunta: str) -> str:
+    ...
+```
+
+#### UI: visibilidad condicional
+
+Cuando un usuario sin rol `datos` abre el chat, el sistema descarta automáticamente cualquier consulta dirigida a `proteccion_datos` y responde con un mensaje de acceso denegado. La trazabilidad en la UI también oculta las tools no autorizadas.
 
 ---
 
 ### Propuesta de Monitoreo
 
-| Aspecto | Herramienta | Detalle |
-|---------|-------------|---------|
-| **Calidad** | LLM-as-Judge (`app/monitoring/evaluacion.py`) | **Implementado** — se ejecuta tras cada respuesta. Ver sección siguiente. |
-| **Costos** | Phoenix UI > Settings > Models | Configurar precios de Gemini ($0.10/1M input, $0.40/1M output para flash-lite) para estimación automática |
-| **Latencia** | Phoenix spans | Capturado automáticamente. Umbral sugerido: alertar si > 10s |
-| **Errores** | Phoenix traces | Filtrar por status=error. Umbral sugerido: alertar si tasa > 5% |
-| **Feedback** | Botón 👍/👎 en cada respuesta | Tabla Feedback (consulta_id, util, comentario). Reporte semanal de respuestas útiles vs no útiles |
+| Aspecto | Herramienta | Estado | Detalle |
+|---------|-------------|--------|---------|
+| **Calidad** | LLM-as-Judge (`app/monitoring/evaluacion.py`) | ✅ **Implementado** | Se ejecuta tras cada respuesta. Ver sección siguiente. |
+| **Costos** | Phoenix UI > Settings > Models | ⚠️ **Propuesto** | Configurar precios de Gemini ($0.10/1M input, $0.40/1M output para flash-lite) para estimación automática. No hay automatización — el usuario debe ingresar los precios manualmente en la UI de Phoenix. |
+| **Latencia** | Phoenix spans | ⚠️ **Propuesto** | Capturado automáticamente en los spans (duración de cada trace). Umbral sugerido: alertar si > 10s. No hay alerta configurada por defecto — requiere configurar en Phoenix UI. |
+| **Errores** | Phoenix traces | ⚠️ **Propuesto** | Filtrar por status=error en la UI de Phoenix. Umbral sugerido: alertar si tasa > 5%. No hay alerta automatizada. |
+| **Feedback** | Botón 👍/👎 en cada respuesta | ❌ **No implementado** | Pendiente de desarrollar. Se propone tabla `Feedback` (consulta_id, util, comentario) con reporte semanal de respuestas útiles vs no útiles. |
 
 ---
 
@@ -507,7 +570,7 @@ La evaluación de calidad se implementó usando el patrón **LLM-as-Judge** apre
 | Claridad | ¿Es clara y bien estructurada para un profesional legal? |
 | Seguridad | ¿Evita inventar normativa o dar consejos fuera de su alcance? |
 
-**Referencia al semillero:** Este patrón se exploró en las sesiones de monitoreo de calidad del Semillero FactorIA, donde se identificó que la autoevaluación con LLM permite detectar alucinaciones, respuestas incompletas y violaciones de seguridad sin intervención humana.
+**Referencia al semillero:** Este patrón se exploró en las sesiones de monitoreo de calidad del Semillero, donde se identificó que la autoevaluación con LLM permite detectar alucinaciones, respuestas incompletas y violaciones de seguridad sin intervención humana.
 
 ---
 
@@ -546,25 +609,47 @@ AGENTES_RAG = [
 ### 1. Gemini como proveedor único gemelo
 LLM y embeddings con Google Gemini: una sola API Key, coherencia semántica entre vectorización y generación.
 
+**Modelo elegido:** `gemini-3.1-flash-lite` para texto e imágenes. *Trade-off:* sacrificamos la profundidad de razonamiento de Gemini Pro a cambio de **latencia ~2-3s por consulta** y **costo significativamente menor** ($0.10/1M input vs $1.25/1M de Gemini Pro). Para consultas legales basadas en recuperación de documentos existentes (no razonamiento complejo), flash-lite es suficiente.
+
 ### 2. Chunking por sección numerada
-Los documentos tienen estructura `1.`, `2.`, `3.`. El chunking por cabeceras preserva la unidad semántica de cada bloque legal. Cada chunk referencia su sección y archivo fuente (`embedding_service.py:chunkear_por_seccion`).
+Los documentos tienen estructura `1.`, `2.`, `3.`. El chunking por cabeceras preserva la unidad semántica de cada bloque legal.
+
+**Cifras reales del corpus actual:**
+
+| Documento | Chunks | Tamaño promedio | Rango |
+|-----------|--------|----------------|-------|
+| `01_Clausulas_Contractuales.txt` | 4 | ~346 caracteres | 114–807 |
+| `02_Proteccion_Datos.txt` | 7 | ~204 caracteres | 100–503 |
+| `03_Cumplimiento_Etica.txt` | 6 | ~198 caracteres | 108–445 |
+
+*Trade-off:* chunks pequeños (~200 caracteres) maximizan precisión semántica pero requieren más recuperaciones. El promedio de 200–350 caracteres equivale a 1–2 párrafos legales, unidad natural para una cláusula o artículo. Cada chunk incluye metadatos `{"seccion": i, "fuente": ruta}` para trazabilidad.
 
 ### 3. ChromaDB con 3 colecciones independientes
-Aislamiento semántico total: una pregunta sobre contratos nunca recupera chunks de datos personales. Métrica coseno para similitud semántica. Cada agente RAG consulta solo su colección.
+Aislamiento semántico total: una pregunta sobre contratos nunca recupera chunks de datos personales. **Métrica coseno** — mejor para similitud semántica en textos cortos que euclidiana o dot product. Cada agente RAG consulta solo su colección.
 
-### 4. Orquestador con create_react_agent (LangGraph)
-Ruteo automático por tema, invocación multi-agente en consultas mixtas, memoria multi-turno con InMemorySaver. Trazabilidad con `_extraer_trazas()`.
+### 4. Retriever con k=3
+`vectorstore.as_retriever(search_kwargs={"k": 3})` — se recuperan **3 fragmentos** por consulta. *Justificación:* con 3 chunks de ~200–350 caracteres cada uno se cubre ~600–1000 caracteres de contexto legal, suficiente para responder sin exceder la ventana de tokens del LLM. k>3 introduce ruido semántico; k<3 arriesga perder información clave.
 
-### 5. Agente de acción con control de flujo 3 niveles
+### 5. Orquestador con create_react_agent (LangGraph)
+Ruteo automático por tema, invocación multi-agente en consultas mixtas, memoria multi-turno con `InMemorySaver`. Trazabilidad con `_extraer_trazas()`. *Alternativa descartada:* `Chain` secuencial de LangChain — no soporta routing dinámico ni memoria entre turnos.
+
+### 6. Agente de acción con control de flujo 3 niveles
 Validación → Confirmación → Persistencia. Nunca escribe sin `confirmado=True`. ID único LEG-XXXX.
 
-### 6. Observabilidad con Phoenix
+### 7. Observabilidad con Phoenix
 OTLP HTTP sobre `BatchSpanProcessor`. Sin healthcheck TCP — el buffer interno maneja la indisponibilidad temporal de Phoenix.
 
 > **Advertencia de seguridad:** Phoenix captura el contenido completo de las consultas y respuestas (preguntas, argumentos de tools como proveedor/monto, y respuestas del LLM). Esta diseñado para entornos de desarrollo y pruebas. No exponer la UI (puerto 6006) en produccion con datos reales sin implementar un filtro de campos sensibles.
 
-### 7. Indexación automática en startup
+### 8. Indexación automática en startup
 `verificar_indexacion()` detecta colecciones faltantes o vacías y las indexa automáticamente al arrancar.
 
-### 8. Seguridad: System prompt hardening integrado
+### 9. Seguridad: System prompt hardening integrado
 Reglas anti-inyección integradas directamente en `SYSTEM_PROMPT_ORQUESTADOR` (`app/agents/orquestador.py`): no simular legislación, no actuar como abogado, no revelar instrucciones internas, rechazar cambios de rol.
+
+### 10. Trazabilidad de fuentes en cada respuesta
+Cada respuesta del orquestador incluye un bloque de **trazabilidad** que muestra:
+- Las herramientas (tools) que se invocaron (ej. `consultar_contratos`, `analizar_imagen_legal`)
+- Los fragmentos recuperados de ChromaDB con su **fuente** (archivo `.txt`) y **sección** (`"seccion": 2`)
+
+Esto permite al usuario legal verificar que la respuesta está respaldada por la base documental y saber exactamente qué documento y sección se consultó. Implementado en `herramientas.py` mediante la función `_extraer_trazas()` que extrae los metadatos de los retrieved documents.
