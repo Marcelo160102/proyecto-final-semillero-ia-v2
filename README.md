@@ -344,9 +344,101 @@ proyecto-final-semillero-ia-v2/
 | Baja | md_basico mejorado (listas, enlaces, parrafos) | Pendiente |
 | Baja | Validacion de tamaño/tipo de archivo subido | Pendiente |
 | Baja | Diseño responsive para moviles (sidebar colapsable) | Pendiente |
-| Media | **Permisos por documento/agente** | Pendiente |
-| Media | **Monitoreo de calidad y costos** | Pendiente |
 | Media | **Sanitización de datos sensibles en UI** | Pendiente |
+
+---
+
+### Propuesta de Permisos por Documento/Agente
+
+**Modelo:** RBAC (Role-Based Access Control)
+
+**Tabla propuesta en SQLite:**
+
+```sql
+CREATE TABLE permisos_agente (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    rol TEXT NOT NULL,
+    coleccion TEXT NOT NULL,
+    permiso TEXT NOT NULL CHECK(permiso IN ('leer', 'escribir', 'admin'))
+);
+```
+
+**Roles sugeridos:**
+
+| Rol | Colecciones accesibles |
+|-----|----------------------|
+| `legal` | contratos, cumplimiento |
+| `datos` | proteccion_datos |
+| `admin` | todas |
+| `consulta` | todas (solo lectura) |
+
+**Enforcement:** Decorador en las tools del orquestador que verifique el rol del usuario antes de ejecutar el retriever. El rol se obtendría de una tabla `usuarios` o variable de entorno.
+
+---
+
+### Propuesta de Monitoreo
+
+| Aspecto | Herramienta | Detalle |
+|---------|-------------|---------|
+| **Calidad** | LLM-as-Judge (`app/monitoring/evaluacion.py`) | **Implementado** — se ejecuta tras cada respuesta. Ver sección siguiente. |
+| **Costos** | Phoenix UI > Settings > Models | Configurar precios de Gemini ($0.10/1M input, $0.40/1M output para flash-lite) para estimación automática |
+| **Latencia** | Phoenix spans | Capturado automáticamente. Umbral sugerido: alertar si > 10s |
+| **Errores** | Phoenix traces | Filtrar por status=error. Umbral sugerido: alertar si tasa > 5% |
+| **Feedback** | Botón 👍/👎 en cada respuesta | Tabla Feedback (consulta_id, util, comentario). Reporte semanal de respuestas útiles vs no útiles |
+
+---
+
+### Evaluación Automática de Respuestas (Implementado)
+
+La evaluación de calidad se implementó usando el patrón **LLM-as-Judge** aprendido en el semillero: un segundo LLM (Gemini) puntúa cada respuesta del orquestador en 4 criterios.
+
+**Funcionamiento:**
+
+1. `app/monitoring/evaluacion.py` define un `PROMPT_EVALUADOR` con 4 criterios (Precisión, Completitud, Claridad, Seguridad) del 1 al 5.
+2. En `app/routers/chat.py:54-58`, tras obtener la respuesta del orquestador, se invoca `evaluar_respuesta(pregunta, respuesta)`.
+3. El resultado (JSON con puntajes y justificación) se almacena en el campo `evaluacion` de la tabla `Consultas` en SQLite.
+4. En la UI, el puntaje total y parcial se muestra bajo la respuesta del agente.
+
+**Criterios evaluados:**
+
+| Criterio | Descripción |
+|----------|-------------|
+| Precisión | ¿La respuesta es legalmente correcta y basada en normativa peruana? |
+| Completitud | ¿Cubre todos los aspectos relevantes de la pregunta? |
+| Claridad | ¿Es clara y bien estructurada para un profesional legal? |
+| Seguridad | ¿Evita inventar normativa o dar consejos fuera de su alcance? |
+
+**Referencia al semillero:** Este patrón se exploró en las sesiones de monitoreo de calidad del Semillero FactorIA, donde se identificó que la autoevaluación con LLM permite detectar alucinaciones, respuestas incompletas y violaciones de seguridad sin intervención humana.
+
+---
+
+### Propuesta de Extensibilidad (Agentes y Bases de Conocimiento)
+
+Actualmente, agregar un nuevo agente RAG requiere modificar **5 archivos** y escribir ~45 líneas de boilerplate. La propuesta es centralizar la configuración en un registro declarativo.
+
+**Registro declarativo propuesto:**
+
+```python
+# app/config/registro_agentes.py (nuevo archivo)
+AGENTES_RAG = [
+    {
+        "nombre": "contratos",
+        "coleccion": "contratos",
+        "ruta_doc": "data/01_Clausulas_Contractuales.txt",
+        "tool_name": "consultar_contratos",
+        "descripcion": "Responde preguntas sobre contratos...",
+        "system_prompt": PROMPT_CONTRATOS,
+    },
+    # ... más agentes
+]
+```
+
+**Con este enfoque, agregar un nuevo agente requiere solo 2 pasos:**
+
+1. Agregar una entrada al diccionario `AGENTES_RAG` (nombre, colección, ruta de documento, tool_name, descripción, system prompt)
+2. Colocar el documento de conocimiento en `data/` con la ruta indicada
+
+**Generación automática:** El `DOCS` de indexación, las `@tool` functions de LangChain y el system prompt del orquestador se generarían dinámicamente desde `AGENTES_RAG`, eliminando el boilerplate de `herramientas.py` y `orquestador.py`.
 
 ---
 

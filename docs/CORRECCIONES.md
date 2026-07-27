@@ -271,83 +271,71 @@ SYSTEM_PROMPT = """... (contenido de SYSTEM_PROMPT_HARDENED + reglas de ruteo) .
 
 ---
 
-## Corrección 4 — Integrar evaluación automática post-respuesta
+## Corrección 4 — Implementar evaluación automática post-respuesta + documentar en README
 
 | Campo | Detalle |
 |-------|---------|
-| **Tipo** | Desarrollo |
-| **Prioridad** | Baja |
+| **Tipo** | Documentación + Desarrollo |
+| **Prioridad** | Media |
 | **Origen** | Spec 10.10: propuesta de monitoreo de calidad |
 
 ### Descripción
 
-`app/evaluacion.py` implementa un evaluador LLM-as-Judge con 4 criterios (precisión, completitud, claridad, seguridad) que puntúa cada respuesta del 1 al 5. Sin embargo, **no se ejecuta automáticamente** tras cada respuesta. Es un módulo standalone que solo puede invocarse manualmente.
+`app/monitoring/evaluacion.py` implementa un evaluador LLM-as-Judge con 4 criterios (precisión, completitud, claridad, seguridad) que puntúa cada respuesta del 1 al 5. Sin embargo, **no se ejecutaba automáticamente** tras cada respuesta.
+
+Se decidió **implementarlo** (no solo proponerlo) dado que el módulo ya existía y solo faltaba la integración. Además se documentó en `README.md` la implementación, los criterios evaluados y la referencia al aprendizaje del semillero.
 
 ### Implementación
 
-Ejecutar `evaluar_respuesta()` después de cada consulta en `routers/chat.py` y almacenar el resultado:
+1. **`app/db/models.py`**: Agregar campo `evaluacion` (Text, nullable) a la clase `Consulta`.
+2. **`app/routers/chat.py`**: Importar `evaluar_respuesta` e invocarlo tras obtener `resultado`, capturando excepciones para no bloquear la respuesta.
+3. **`app/templates/fragments/respuesta_agente.html`**: Mostrar el puntaje de evaluación (puntaje_total, precisión, completitud, claridad, seguridad) bajo la respuesta del agente.
+4. **`README.md`**: Actualizar la tabla de Propuesta de Monitoreo marcando Calidad como **Implementado** y agregar sección "Evaluación Automática de Respuestas" con detalles de funcionamiento, criterios y referencia al semillero.
 
+### Archivos afectados
+
+- `app/db/models.py` — campo `evaluacion` agregado
+- `app/routers/chat.py` — llamado a `evaluar_respuesta()`
+- `app/templates/fragments/respuesta_agente.html` — mostrar puntaje
+- `README.md` — documentar implementación
+
+### Cambios realizados
+
+**`app/db/models.py`:**
 ```python
-# En chat.py, después de obtener resultado:
+evaluacion: Mapped[str | None] = mapped_column(Text, nullable=True)
+```
+
+**`app/routers/chat.py`:**
+```python
+from app.monitoring.evaluacion import evaluar_respuesta
+
+# ... después de obtener resultado:
 try:
     evaluacion = evaluar_respuesta(pregunta, resultado["respuesta"])
     resultado["evaluacion"] = evaluacion
 except Exception:
     resultado["evaluacion"] = None
+
+# En creación de Consulta:
+evaluacion=json.dumps(resultado.get("evaluacion"), ensure_ascii=False) if resultado.get("evaluacion") else None,
 ```
 
-Opcionalmente almacenar la evaluación en el modelo `Consulta` (nuevo campo JSON) y mostrar el puntaje en la UI de trazabilidad.
+**`respuesta_agente.html`:**
+```html
+{% if respuesta.evaluacion and respuesta.evaluacion.puntaje_total %}
+<div class="evaluacion" style="margin-top:8px;font-size:0.8em;color:#666;">
+    Evaluación: {{ respuesta.evaluacion.puntaje_total }}/5
+    (Precisión: {{ respuesta.evaluacion.precision }}, ...)
+</div>
+{% endif %}
+```
 
-### Archivos afectados
+### Verificación
 
-- `app/routers/chat.py` — llamar a `evaluar_respuesta()` post-consulta
-- `app/db/models.py` — agregar campo `evaluacion` a `Consulta`
-- `app/templates/fragments/respuesta_agente.html` — mostrar puntaje opcional
-
-### Plan de ejecución paso a paso
-
-**Paso 1 — `app/db/models.py`:**
-1. Agregar campo `evaluacion` a la clase `Consulta` (después de `fuentes`, línea 34):
-   ```python
-   evaluacion: Mapped[str | None] = mapped_column(Text, nullable=True)
-   ```
-
-**Paso 2 — `app/routers/chat.py`:**
-1. Agregar import:
-   ```python
-   from app.monitoring.evaluacion import evaluar_respuesta
-   ```
-2. Después de obtener `resultado` (después del try/except si ya existe, o después de la línea `resultado = await loop.run_in_executor(...)`), agregar:
-   ```python
-   try:
-       evaluacion = evaluar_respuesta(pregunta, resultado["respuesta"])
-       resultado["evaluacion"] = evaluacion
-   except Exception:
-       resultado["evaluacion"] = None
-   ```
-3. En la creación del objeto `Consulta`, agregar el nuevo campo:
-   ```python
-   evaluacion=json.dumps(resultado.get("evaluacion"), ensure_ascii=False) if resultado.get("evaluacion") else None,
-   ```
-
-**Paso 3 — `app/templates/fragments/respuesta_agente.html`:**
-1. Agregar bloque condicional para mostrar el puntaje de evaluación si existe:
-   ```html
-   {% if respuesta.evaluacion %}
-   <div class="evaluacion">
-     <small>Evaluación: {{ respuesta.evaluacion.puntaje_total }}/5
-       (Precisión: {{ respuesta.evaluacion.precision }},
-        Completitud: {{ respuesta.evaluacion.completitud }},
-        Claridad: {{ respuesta.evaluacion.claridad }},
-        Seguridad: {{ respuesta.evaluacion.seguridad }})</small>
-   </div>
-   {% endif %}
-   ```
-
-**Verificación:**
-1. La app debe arrancar sin errores
-2. Cada respuesta debe incluir el bloque de evaluación en el HTML (inspeccionar elemento)
-3. La evaluación es asíncrona y no debe bloquear la respuesta al usuario
+1. `python3 -c "from app.main import app"` sin errores
+2. Cada respuesta debe incluir el bloque de evaluación en el HTML
+3. La evaluación captura excepciones y no bloquea la respuesta si falla
 
 ---
 
@@ -501,175 +489,71 @@ Documentar en `README.md` una propuesta de monitoreo que articule los componente
 
 ---
 
-## Corrección 7 — Refactorizar extensibilidad (registro declarativo de agentes)
+## Corrección 7 — Proponer solución extensible en README
 
 | Campo | Detalle |
 |-------|---------|
-| **Tipo** | Desarrollo |
+| **Tipo** | Documentación |
 | **Prioridad** | Media |
 | **Origen** | Spec 10.9: *"Diseñar una solución extensible para agregar nuevos agentes y nuevas bases de conocimiento"* |
 
 ### Descripción
 
-Actualmente agregar un nuevo agente RAG requiere tocar **5 archivos** y escribir **~45 líneas** de boilerplate. El patrón se repite en:
+El spec exige **diseñar/proponer** una solución extensible, no implementarla. Actualmente agregar un nuevo agente RAG requiere tocar **5 archivos** y escribir **~45 líneas** de boilerplate. El patrón se repite en:
 
-- `app/agents/contratos.py` — 19 líneas
-- `app/agents/proteccion_datos.py` — 19 líneas (casi idéntico)
-- `app/agents/cumplimiento.py` — 19 líneas (casi idéntico)
+- `app/agents/contratos.py`, `proteccion_datos.py`, `cumplimiento.py` — ~19 líneas cada uno (casi idénticos)
 - `app/agents/herramientas.py:11-38` — 3 tools wrapper casi idénticas
+
+La propuesta documentada en `README.md` describe un **registro declarativo** que centraliza la configuración de agentes y bases de conocimiento.
 
 ### Implementación
 
-Crear un registro declarativo de agentes que elimine el boilerplate:
+Agregar sección "Propuesta de Extensibilidad (Agentes y Bases de Conocimiento)" en `README.md` con:
 
-```python
-# app/config/registro_agentes.py (nuevo archivo)
-from app.agents.base import PROMPT_CONTRATOS, PROMPT_DATOS, PROMPT_CUMPLIMIENTO
-
-AGENTES_RAG = [
-    {
-        "nombre": "contratos",
-        "coleccion": "contratos",
-        "ruta_doc": "data/01_Clausulas_Contractuales.txt",
-        "tool_name": "consultar_contratos",
-        "descripcion": "Responde preguntas sobre contratos: cláusulas mínimas, tipos de contrato, plazos, proceso de revisión y firma.",
-        "system_prompt": PROMPT_CONTRATOS,
-    },
-    {
-        "nombre": "proteccion_datos",
-        "coleccion": "proteccion_datos",
-        "ruta_doc": "data/02_Proteccion_Datos.txt",
-        "tool_name": "consultar_proteccion_datos",
-        "descripcion": "Responde preguntas sobre protección de datos personales: derechos ARCO, retención, seguridad, brechas.",
-        "system_prompt": PROMPT_DATOS,
-    },
-    {
-        "nombre": "cumplimiento",
-        "coleccion": "cumplimiento",
-        "ruta_doc": "data/03_Cumplimiento_Etica.txt",
-        "tool_name": "consultar_cumplimiento",
-        "descripcion": "Responde preguntas sobre cumplimiento normativo: código de ética, conflictos de interés, regalos, anticorrupción, canal de denuncias.",
-        "system_prompt": PROMPT_CUMPLIMIENTO,
-    },
-]
-```
-
-Luego:
-- `embedding_service.py`: `DOCS` se genera automáticamente desde `AGENTES_RAG`
-- `herramientas.py`: generar `@tool` functions dinámicamente desde `AGENTES_RAG` usando `tool_factory()`
-- `orquestador.py`: system prompt se construye dinámicamente desde `AGENTES_RAG`
-
-Con este enfoque, agregar un nuevo agente es solo **1 entrada en `AGENTES_RAG`** + **1 archivo de prompt** = **0 cambios en herramientas.py ni orquestador.py**.
+- **Problema actual**: cuántos archivos tocar para agregar un agente nuevo
+- **Solución propuesta**: registro declarativo (`AGENTES_RAG`) con nombre, colección, ruta, tool_name, descripción y system prompt
+- **Generación automática**: cómo se derivarían `DOCS`, `@tool` functions y system prompt desde el registro
+- **Procedimiento**: los 2 pasos para agregar un nuevo agente (1 entrada en el registro + 1 archivo de conocimiento)
 
 ### Archivos afectados
 
-- Crear: `app/config/registro_agentes.py`
-- Modificar: `app/services/embedding_service.py` — generar `DOCS` desde registro
-- Modificar: `app/agents/herramientas.py` — generar tools desde registro
-- Modificar: `app/agents/orquestador.py` — generar system prompt desde registro
-- Opcional: eliminar `app/agents/contratos.py`, `proteccion_datos.py`, `cumplimiento.py`
+- `README.md` — agregar subsección "Propuesta de Extensibilidad"
 
-### Plan de ejecución paso a paso
+### Cambios realizados
 
-**Paso 1 — Crear `app/config/registro_agentes.py`:**
+Se agregó en `README.md` la sección `### Propuesta de Extensibilidad (Agentes y Bases de Conocimiento)` después de la sección de monitoreo, con:
+
+```markdown
+### Propuesta de Extensibilidad (Agentes y Bases de Conocimiento)
+
+Actualmente, agregar un nuevo agente RAG requiere modificar **5 archivos** y escribir ~45 líneas
+de boilerplate. La propuesta es centralizar la configuración en un registro declarativo.
+
+**Registro declarativo propuesto:**
 ```python
-from app.agents.contratos import PROMPT_CONTRATOS
-from app.agents.proteccion_datos import PROMPT_DATOS
-from app.agents.cumplimiento import PROMPT_CUMPLIMIENTO
-
 AGENTES_RAG = [
     {
         "nombre": "contratos",
         "coleccion": "contratos",
         "ruta_doc": "data/01_Clausulas_Contractuales.txt",
         "tool_name": "consultar_contratos",
-        "descripcion": "Responde preguntas sobre contratos: clausulas minimas, tipos de contrato, plazos, proceso de revision y firma.",
+        "descripcion": "...",
         "system_prompt": PROMPT_CONTRATOS,
-    },
-    {
-        "nombre": "proteccion_datos",
-        "coleccion": "proteccion_datos",
-        "ruta_doc": "data/02_Proteccion_Datos.txt",
-        "tool_name": "consultar_proteccion_datos",
-        "descripcion": "Responde preguntas sobre proteccion de datos personales: derechos ARCO, retencion, seguridad, brechas.",
-        "system_prompt": PROMPT_DATOS,
-    },
-    {
-        "nombre": "cumplimiento",
-        "coleccion": "cumplimiento",
-        "ruta_doc": "data/03_Cumplimiento_Etica.txt",
-        "tool_name": "consultar_cumplimiento",
-        "descripcion": "Responde preguntas sobre cumplimiento normativo: codigo de etica, conflictos de interes, regalos, anticorrupcion, canal de denuncias.",
-        "system_prompt": PROMPT_CUMPLIMIENTO,
     },
 ]
 ```
-Se crea en `app/config/` (directorio ya existente con `config.py`).
 
-**Paso 2 — Modificar `app/services/embedding_service.py`:**
-1. Agregar import al inicio:
-   ```python
-   from app.config.registro_agentes import AGENTES_RAG
-   ```
-2. Reemplazar el `DOCS` manual (líneas 113-117) por:
-   ```python
-   DOCS = [
-       {"ruta": a["ruta_doc"], "nombre": a["nombre"], "coleccion": a["coleccion"]}
-       for a in AGENTES_RAG
-   ]
-   ```
+**Con este enfoque, agregar un nuevo agente requiere solo 2 pasos:**
+1. Agregar una entrada al diccionario `AGENTES_RAG`
+2. Colocar el documento de conocimiento en `data/`
 
-**Paso 3 — Modificar `app/agents/herramientas.py`:**
-1. Agregar factory function que genere tools dinámicamente:
-   ```python
-   from app.config.registro_agentes import AGENTES_RAG
-   from app.agents.base import responder_rag
-   from app.services.chroma_service import obtener_retriever
-   from app.services.llm_service import obtener_embeddings
+**Generación automática:** El `DOCS` de indexación, las `@tool` functions y el system prompt
+del orquestador se generarían dinámicamente desde `AGENTES_RAG`.
+```
 
-   def _crear_tool_rag(agente: dict):
-       @tool(name=agente["tool_name"], description=agente["descripcion"])
-       def tool_fn(pregunta: str) -> str:
-           embeddings = obtener_embeddings()
-           retriever = obtener_retriever(agente["coleccion"], embeddings)
-           respuesta, docs = responder_rag(retriever, agente["system_prompt"], pregunta)
-           fuentes = "; ".join(f"seccion {d.metadata.get('seccion', '?')}" for d in docs)
-           return f"{respuesta}\n[Fuentes: {fuentes}]"
-       return tool_fn
+### Verificación
 
-   TOOLS_RAG = [_crear_tool_rag(a) for a in AGENTES_RAG]
-   ```
-2. Reemplazar `TOOLS_ORQUESTADOR` para que incluya `TOOLS_RAG` + tools manuales:
-   ```python
-   TOOLS_ORQUESTADOR = TOOLS_RAG + [analizar_documento_legal_tool, registrar_solicitud_legal_tool]
-   ```
-
-**Paso 4 — Modificar `app/agents/orquestador.py`:**
-1. Agregar import:
-   ```python
-   from app.config.registro_agentes import AGENTES_RAG
-   ```
-2. Generar system prompt dinámicamente:
-   ```python
-   DESCRIPCIONES = "\n".join(
-       f"- {a['tool_name']}: {a['descripcion']}" for a in AGENTES_RAG
-   )
-   SYSTEM_PROMPT_ORQUESTADOR = f"""Eres el orquestador de la Mesa de Ayuda Legal de Patito S.A. Coordinas agentes especializados:
-
-   {DESCRIPCIONES}
-   - analizar_documento_legal_tool: cuando el usuario indique la RUTA de una imagen...
-   ...
-   """
-   ```
-
-**Paso 5 (opcional) — Eliminar archivos redundantes:**
-Si se opta por eliminar los agentes individuales, migrar sus prompts a `registro_agentes.py` o `base.py`:
-- `git rm app/agents/contratos.py app/agents/proteccion_datos.py app/agents/cumplimiento.py`
-
-**Verificación:**
-1. `python3 -c "from app.main import app"` sin errores
-2. Las 3 consultas de prueba (contratos, datos, cumplimiento) deben funcionar igual que antes
-3. Agregar un 4to agente de prueba al registro no debería requerir cambios en `herramientas.py` ni `orquestador.py`
+El README debe verse bien formateado en GitHub/markdown viewer.
 
 ---
 
@@ -680,10 +564,10 @@ Si se opta por eliminar los agentes individuales, migrar sus prompts a `registro
 | 1 | Sanitización de logs sensibles | Desarrollo | Media | `services/embedding_service.py`, `monitoring/phoenix_setup.py`, `README.md` |
 | 2 | Manejo de errores runtime (Gemini/ChromaDB) | Desarrollo | **Alta** | `routers/chat.py`, `agents/base.py`, `services/chroma_service.py` |
 | 3 | Conectar hardened orchestrator | Desarrollo | Media | `agents/orquestador.py`, `monitoring/hardening.py` |
-| 4 | Integrar evaluación automática | Desarrollo | Baja | `routers/chat.py`, `db/models.py`, templates |
+| 4 | Implementar evaluación automática + documentar | Documentación + Desarrollo | Media | `routers/chat.py`, `db/models.py`, templates, `README.md` |
 | 5 | Proponer modelo de permisos en README | Documentación | Media | `README.md` |
 | 6 | Proponer monitoreo integrado en README | Documentación | Media | `README.md` |
-| 7 | Refactorizar extensibilidad (registro declarativo) | Desarrollo | Media | `config/registro_agentes.py` (nuevo), `services/embedding_service.py`, `agents/herramientas.py`, `agents/orquestador.py` |
+| 7 | Proponer solución extensible en README | Documentación | Media | `README.md` |
 
 ---
 
@@ -762,11 +646,11 @@ git checkout -- .
 |-------|-----------|-------------------|-----------------|
 | 1 | **C5** — Propuesta permisos en README | Ninguno (solo docs) | 10 min |
 | 2 | **C6** — Propuesta monitoreo en README | Ninguno (solo docs) | 10 min |
-| 3 | **C1** — Sanitización logs | Muy bajo (print condicional) | 10 min |
-| 4 | **C4** — Evaluación automática | Bajo (try/except aislado) | 20 min |
-| 5 | **C3** — Conectar hardening | Medio (cambia system prompt) | 15 min |
-| 6 | **C2** — Manejo errores runtime | Medio (envuelve funciones clave) | 30 min |
-| 7 | **C7** — Registro declarativo | **Alto** (refactoriza 3 archivos) | 45 min |
+| 3 | **C4** — Evaluación automática + documentación | Bajo (try/except aislado + docs) | 20 min |
+| 4 | **C7** — Propuesta extensibilidad en README | Ninguno (solo docs) | 10 min |
+| 5 | **C1** — Sanitización logs | Muy bajo (print condicional) | 10 min |
+| 6 | **C3** — Conectar hardening | Medio (cambia system prompt) | 15 min |
+| 7 | **C2** — Manejo errores runtime | Medio (envuelve funciones clave) | 30 min |
 
 > **Recomendación:** Aplicar en este orden y probar con `docker compose up --build` después de cada una. La C7 es la más riesgosa por ser una refactorización — aplicarla al final con el resto ya validado.
 
