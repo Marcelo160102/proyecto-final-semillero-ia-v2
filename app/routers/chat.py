@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 from pathlib import Path
 from uuid import uuid4
 
@@ -50,7 +51,21 @@ async def enviar_consulta(
     )
 
     loop = asyncio.get_event_loop()
-    resultado = await loop.run_in_executor(None, consultar, pregunta_final)
+    try:
+        resultado = await loop.run_in_executor(None, consultar, pregunta_final)
+    except Exception as e:
+        logging.error("Error en consulta: %s", e)
+        resultado = {
+            "respuesta": "Ocurrio un error al procesar tu consulta. Por favor intenta de nuevo mas tarde.",
+            "agentes": [],
+            "trazas": [],
+        }
+        contexto = {"pregunta": pregunta, "respuesta": resultado}
+        response = templates.TemplateResponse(
+            request, "fragments/respuesta_agente.html", contexto,
+        )
+        response.headers["HX-Trigger"] = "history-updated"
+        return response
 
     try:
         evaluacion = evaluar_respuesta(pregunta, resultado["respuesta"])

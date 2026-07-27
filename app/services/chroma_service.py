@@ -20,10 +20,15 @@ def obtener_retriever(
     embeddings: GoogleGenerativeAIEmbeddings,
     k: int = 3,
 ):
+    import logging
     client = _obtener_cliente()
-    vectorstore = Chroma(
-        client=client,
-        collection_name=coleccion,
-        embedding_function=embeddings,
-    )
-    return vectorstore.as_retriever(search_kwargs={"k": k})
+    try:
+        vectorstore = Chroma(
+            client=client,
+            collection_name=coleccion,
+            embedding_function=embeddings,
+        )
+        return vectorstore.as_retriever(search_kwargs={"k": k})
+    except Exception as e:
+        logging.error("ChromaDB no disponible para coleccion '%s': %s", coleccion, e)
+        raise
