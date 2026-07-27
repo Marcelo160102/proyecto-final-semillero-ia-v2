@@ -54,7 +54,7 @@ def registrar_solicitud_legal_tool(
     trata_datos_personales: str = "",
     confirmado: bool = False,
 ) -> str:
-    """Registra una solicitud de elaboración o revisión de contrato. Requiere: tipo_contrato, proveedor, objeto, plazo, monto, trata_datos_personales. Si falta algún dato, devuelve cuáles faltan. Si datos están completos pero confirmado=False, pide confirmación."""
+    """Registra una solicitud de elaboracion o revision de contrato. Requiere: tipo_contrato, proveedor, objeto, plazo, monto, trata_datos_personales. Si falta algun dato, devuelve cuales faltan. Si datos estan completos pero confirmado=False, pide confirmacion. Si confirmado=True y algunos datos estan vacios, el sistema reutiliza los datos de la llamada anterior."""
     return registrar_solicitud_legal(
         tipo_contrato=tipo_contrato,
         proveedor=proveedor,

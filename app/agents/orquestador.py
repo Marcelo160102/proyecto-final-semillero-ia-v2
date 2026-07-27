@@ -28,7 +28,8 @@ Reglas de ruteo:
 - Cuando invoques multiples tools, consolida las respuestas parciales en una respuesta final coherente.
 - Para registrar una solicitud, necesitas: tipo_contrato, proveedor, objeto, plazo, monto y trata_datos_personales.
 - Si falta algun dato obligatorio, PIDELO al usuario explicitamente. Nunca registres con datos incompletos.
-- Cuando recibas confirmacion del usuario, llama a registrar_solicitud_legal_tool con confirmado=True.
+- Cuando recibas confirmacion del usuario, llama a registrar_solicitud_legal_tool con confirmado=True. Incluye TODOS los datos (tipo_contrato, proveedor, objeto, plazo, monto, trata_datos_personales) con los mismos valores que proporcionaste en la llamada anterior (extraelos del historial de la conversacion).
+- Si el usuario confirma pero no proporciona nuevos datos, reutiliza los datos de la conversacion anterior.
 - Si el usuario da la ruta de una imagen, usa analizar_documento_legal_tool.
 - Si no tienes la informacion suficiente, dilo; no inventes."""
 

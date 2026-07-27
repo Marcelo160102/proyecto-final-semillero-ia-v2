@@ -16,6 +16,8 @@ CAMPOS_SOLICITUD = [
     "monto", "trata_datos_personales",
 ]
 
+_pendiente: dict | None = None
+
 
 def _siguiente_id_solicitud() -> str:
     with Session(sync_engine) as session:
@@ -32,14 +34,18 @@ def registrar_solicitud_legal(
     trata_datos_personales: str = "",
     confirmado: bool = False,
 ) -> str:
-    """Registra una solicitud de elaboración o revisión de contrato.
+    """Registra una solicitud de elaboracion o revision de contrato.
 
     Requiere: tipo_contrato, proveedor, objeto, plazo, monto,
-    trata_datos_personales (sí/no).
-    Si falta algún dato, NO registra y devuelve cuáles faltan.
-    Si datos están completos pero confirmado=False, pide confirmación.
+    trata_datos_personales (si/no).
+    Si falta algun dato, NO registra y devuelve cuales faltan.
+    Si datos estan completos pero confirmado=False, pide confirmacion.
+    Si confirmado=True y algunos datos estan vacios, el sistema reutiliza
+    los datos de la llamada anterior.
     Solo escribe en BD cuando confirmado=True.
     """
+    global _pendiente
+
     datos = {
         "tipo_contrato": tipo_contrato,
         "proveedor": proveedor,
@@ -50,13 +56,19 @@ def registrar_solicitud_legal(
     }
 
     faltantes = [k for k in CAMPOS_SOLICITUD if not str(datos[k]).strip()]
+
+    if faltantes and confirmado and _pendiente is not None:
+        datos = _pendiente
+        faltantes = []
+
     if faltantes:
         return (
-            "No se registró. Faltan datos obligatorios: "
+            "No se registro. Faltan datos obligatorios: "
             f"{', '.join(faltantes)}."
         )
 
     if not confirmado:
+        _pendiente = datos
         resumen = (
             f"Tipo: {tipo_contrato} | Proveedor: {proveedor} | "
             f"Objeto: {objeto} | Plazo: {plazo} | "
@@ -84,4 +96,5 @@ def registrar_solicitud_legal(
         session.add(solicitud)
         session.commit()
 
+    _pendiente = None
     return f"Solicitud registrada con ID {rid}."

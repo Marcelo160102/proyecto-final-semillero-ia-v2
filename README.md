@@ -1,6 +1,6 @@
 # Mesa de Ayuda IA para el Departamento Legal — Patito S.A. v2
 
-**Grupo FactorIA** | Semillero IA
+### Grupo FactorIA | Semillero IA
 
 | Integrantes |
 | :--- |
@@ -19,26 +19,26 @@ Sistema de inteligencia artificial para el departamento legal de **Patito S.A.**
 ## Arquitectura del Sistema
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        NAVEGADOR WEB                                │
+┌────────────────────────────────────────────────────────────────────┐
+│                        NAVEGADOR WEB                               │
 │  ┌─────────────────────┐    ┌──────────────────────────────────┐   │
-│  │  /registros          │    │  / (Chat)                       │   │
-│  │  (tabla solicitudes) │    │  (input, historial, trazabilidad)│   │
+│  │  /registros         │    │  / (Chat)                        │   │
+│  │  (tabla solicitudes)│    │  (input, historial, trazabilidad)│   │
 │  └─────────────────────┘    └──────────────┬───────────────────┘   │
 └────────────────────────────────────────────┼───────────────────────┘
                                              │
                                              ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                   FASTAPI (app/main.py)                             │
+┌────────────────────────────────────────────────────────────────────┐
+│                   FASTAPI (app/main.py)                            │
 │   Jinja2 + HTMX + CSS / Phoenix OTel / SQLAlchemy async            │
-└──────────────────────────┬──────────────────────────────────────────┘
+└──────────────────────────┬─────────────────────────────────────────┘
                            │
                            ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                      ORQUESTADOR (create_react_agent)               │
-│               + InMemorySaver (memoria multi-turno)                 │
-│                                                                     │
-│  System Prompt: ruteo por tema, consolidación multi-agente          │
+┌────────────────────────────────────────────────────────────────────┐
+│                      ORQUESTADOR (create_react_agent)              │
+│               + InMemorySaver (memoria multi-turno)                │
+│                                                                    │
+│  System Prompt: ruteo por tema, consolidación multi-agente         │
 │  Trazabilidad: muestra qué tools se invocaron en cada respuesta    │
 └──┬────────┬────────┬─────────────┬────────────────┬────────────────┘
    │        │        │             │                │
@@ -50,17 +50,17 @@ Sistema de inteligencia artificial para el departamento legal de **Patito S.A.**
    │        │        │            │                   │
    ▼        ▼        ▼            ▼                   ▼
 ┌──────┐ ┌──────┐ ┌──────┐  ┌───────────┐  ┌─────────────────┐
-│Chroma│ │Chroma│ │Chroma│  │Gemini     │  │  SQLite          │
-│  DB  │ │  DB  │ │  DB  │  │Vision     │  │  solicitudes.db  │
+│Chroma│ │Chroma│ │Chroma│  │Gemini     │  │  SQLite         │
+│  DB  │ │  DB  │ │  DB  │  │Vision     │  │  solicitudes.db │
 └──┬───┘ └──┬───┘ └──┬───┘  └───────────┘  └─────────────────┘
    │        │        │
    ▼        ▼        ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                 BASE DE CONOCIMIENTO (data/)                        │
+┌────────────────────────────────────────────────────────────────────┐
+│                 BASE DE CONOCIMIENTO (data/)                       │
 │  01_Clausulas_Contractuales.txt                                    │
 │  02_Proteccion_Datos.txt                                           │
 │  03_Cumplimiento_Etica.txt                                         │
-└─────────────────────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────────────────────┘
 
 Capas transversales:
   - Observabilidad: Phoenix (http://localhost:6006) + OpenTelemetry
@@ -96,8 +96,7 @@ Capas transversales:
 3. docker compose -f docker-compose.yml -f docker-compose.phoenix.yml up --build
    (indexacion automatica al primer arranque)
        ↓
-4. Abrir http://localhost:8080
-         http://localhost:6006
+4. Abrir http://localhost:8080 y/o http://localhost:6006
 ```
 
 ---
@@ -219,8 +218,11 @@ docker compose -f docker-compose.yml -f docker-compose.phoenix.yml down -v
 **Multi-topico (varios agentes):**
 - Necesito redactar un contrato de servicios para un proveedor que tratara datos personales. ¿Que clausulas debe incluir y que requisitos de proteccion de datos debo cumplir?
 
-**Registrar solicitud legal:**
-- Quiero registrar una solicitud de revision de un contrato de confidencialidad con el proveedor DataCorp por un monto de $15,000 por 12 meses. No involucra tratamiento de datos.
+**Registrar solicitud legal (multi-turno con confirmacion):**
+- Turno 1: "Quiero registrar una solicitud de revision de un contrato de confidencialidad con el proveedor DataCorp por un monto de $15,000 por 12 meses. No involucra tratamiento de datos."
+  → El asistente debe responder con un resumen de los datos y pedir confirmacion.
+- Turno 2: "si, confirma el registro"
+  → El asistente debe registrar la solicitud y devolver un ID (ej: LEG-0001).
 
 **Analisis de imagen:**
 - Subir una imagen de un documento legal y escribir "Analiza este documento legal" (ruta de imagen demo: img/contrato_demo.png)
@@ -236,41 +238,46 @@ docker compose -f docker-compose.yml -f docker-compose.phoenix.yml down -v
 proyecto-final-semillero-ia-v2/
 ├── app/
 │   ├── __init__.py
-│   ├── main.py                  # FastAPI app + lifespan
-│   ├── config.py                # Configuracion via .env
-│   ├── database.py              # SQLAlchemy async engine
-│   ├── models.py                # ORM: Consulta, SolicitudLegal
-│   ├── schemas.py               # Pydantic schemas
+│   ├── main.py                  # FastAPI app + lifespan (migracion incluida)
 │   ├── templating.py            # Jinja2 + filtros personalizados
-│   ├── phoenix_setup.py         # OpenTelemetry + LangChainInstrumentor
-│   ├── evaluacion.py            # LLM-as-Judge con rubrica legal
+│   ├── config/
+│   │   ├── __init__.py
+│   │   └── config.py            # Configuracion via .env
+│   ├── db/
+│   │   ├── __init__.py
+│   │   ├── database.py          # SQLAlchemy async engine
+│   │   └── models.py            # ORM: Consulta (con evaluacion), SolicitudLegal
+│   ├── monitoring/
+│   │   ├── __init__.py
+│   │   ├── phoenix_setup.py     # OpenTelemetry + LangChainInstrumentor
+│   │   └── evaluacion.py        # LLM-as-Judge con rubrica legal
 │   ├── agents/
 │   │   ├── __init__.py
-│   │   ├── base.py              # responder_rag + extraer_texto
-│   │   ├── orquestador.py       # create_react_agent + memoria
+│   │   ├── base.py              # responder_rag + extraer_texto (con error handling)
+│   │   ├── orquestador.py       # create_react_agent + memoria + hardening
 │   │   ├── herramientas.py      # 5 tools del orquestador
 │   │   ├── contratos.py         # RAG especializado en contratos
 │   │   ├── proteccion_datos.py  # RAG especializado en datos personales
 │   │   ├── cumplimiento.py      # RAG especializado en cumplimiento
 │   │   ├── multimodal.py        # Analisis de imagenes con Gemini
-│   │   └── accion.py            # Registro de solicitudes legales
+│   │   └── accion.py            # Registro de solicitudes legales (con cache multi-turno)
 │   ├── routers/
 │   │   ├── __init__.py
-│   │   ├── chat.py              # GET /, POST /chat, DELETE /historial
+│   │   ├── chat.py              # GET /, POST /chat, DELETE /historial (con evaluacion + error handling)
 │   │   ├── registros.py         # GET /registros
 │   │   └── admin.py             # GET /health
 │   ├── services/
 │   │   ├── __init__.py
 │   │   ├── llm_service.py       # Singleton LLM + Embeddings
-│   │   ├── chroma_service.py    # Cliente ChromaDB (HTTP / Persistent)
-│   │   └── embedding_service.py # Indexacion de documentos
+│   │   ├── chroma_service.py    # Cliente ChromaDB (HTTP / Persistent) con error handling
+│   │   └── embedding_service.py # Indexacion de documentos (DEBUG_INDEXING)
 │   ├── templates/
 │   │   ├── base.html            # Layout: sidebar + main
 │   │   ├── index.html           # Pagina de chat
 │   │   ├── registros.html       # Tabla de solicitudes
 │   │   └── fragments/
 │   │       ├── mensaje_chat.html       # Burbuja completa (historial)
-│   │       ├── respuesta_agente.html   # Burbuja solo agente (HTMX)
+│   │       ├── respuesta_agente.html   # Burbuja solo agente + evaluacion (HTMX)
 │   │       └── historial.html          # Lista del sidebar
 │   └── static/
 │       └── estilo.css           # Estilos completos
@@ -280,10 +287,9 @@ proyecto-final-semillero-ia-v2/
 │   └── 03_Cumplimiento_Etica.txt
 ├── scripts/
 │   └── indexar.py               # Script de indexacion
-├── chroma_data/                 # Persistencia local de ChromaDB
-├── docs/
-│   └── README.md                # Documentacion original del notebook
-├── solicitudes.db               # SQLite (se crea automaticamente)
+├── chroma_data/                 # Persistencia local de ChromaDB (se crea automaticamente)
+├── docs/                        # Desarrollo
+│   └── CORRECCIONES.md          # Plan de correcciones (ignorado por git)
 ├── .env.example                 # Template de configuracion
 ├── docker-compose.yml           # App + ChromaDB
 ├── docker-compose.phoenix.yml   # Override con Phoenix
@@ -468,9 +474,3 @@ OTLP HTTP sobre `BatchSpanProcessor`. Sin healthcheck TCP — el buffer interno 
 
 ### 8. Seguridad: System prompt hardening integrado
 Reglas anti-inyección integradas directamente en `SYSTEM_PROMPT_ORQUESTADOR` (`app/agents/orquestador.py`): no simular legislación, no actuar como abogado, no revelar instrucciones internas, rechazar cambios de rol.
-
----
-
-## Licencia
-
-Proyecto academico — Semillero FactorIA
