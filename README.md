@@ -16,6 +16,12 @@ Sistema de inteligencia artificial para el departamento legal de **Patito S.A.**
 
 ---
 
+## Video de Demostración
+
+[Enlace al video de demostración del proyecto](https://www.youtube.com/watch?v=TU_ENLACE_AQUI)
+
+---
+
 ## Arquitectura del Sistema
 
 ```
