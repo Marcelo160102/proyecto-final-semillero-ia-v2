@@ -1,3 +1,4 @@
+import os
 import re
 import time
 from pathlib import Path
@@ -31,8 +32,9 @@ def resumen_chunks(chunks: list[str]):
     total_car = sum(len(c) for c in chunks)
     print(f"  Tamaño promedio: {total_car // len(chunks)} caracteres")
     print(f"  Tamaño min/max: {min(len(c) for c in chunks)} / {max(len(c) for c in chunks)} caracteres")
-    for i, c in enumerate(chunks):
-        print(f"    ch_{i}: {c[:80].replace(chr(10), ' ')}...")
+    if os.getenv("DEBUG_INDEXING"):
+        for i, c in enumerate(chunks):
+            print(f"    ch_{i}: {c[:80].replace(chr(10), ' ')}...")
 
 
 def indexar_documento(

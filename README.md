@@ -461,6 +461,8 @@ Validación → Confirmación → Persistencia. Nunca escribe sin `confirmado=Tr
 ### 6. Observabilidad con Phoenix
 OTLP HTTP sobre `BatchSpanProcessor`. Sin healthcheck TCP — el buffer interno maneja la indisponibilidad temporal de Phoenix.
 
+> **Advertencia de seguridad:** Phoenix captura el contenido completo de las consultas y respuestas (preguntas, argumentos de tools como proveedor/monto, y respuestas del LLM). Esta diseñado para entornos de desarrollo y pruebas. No exponer la UI (puerto 6006) en produccion con datos reales sin implementar un filtro de campos sensibles.
+
 ### 7. Indexación automática en startup
 `verificar_indexacion()` detecta colecciones faltantes o vacías y las indexa automáticamente al arrancar.
 

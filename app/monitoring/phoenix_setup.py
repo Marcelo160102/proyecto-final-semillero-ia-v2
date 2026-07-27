@@ -7,6 +7,9 @@ from openinference.instrumentation.langchain import LangChainInstrumentor
 from app.config.config import obtener_config
 
 
+# ADVERTENCIA: LangChainInstrumentor captura input/output completo del LLM
+# (preguntas, respuestas y argumentos de tools como proveedor/monto).
+# No usar en produccion con datos reales sin implementar filtro de campos sensibles.
 def setup_phoenix():
     config = obtener_config()
     endpoint = f"http://{config.phoenix_host}:{config.phoenix_port}/v1/traces"
