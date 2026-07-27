@@ -111,9 +111,55 @@ Capas transversales:
 
 ### Requisitos Previos
 
-- **Docker** (Engine 24+ en Linux, Docker Desktop en Windows)
+- **Docker** (Engine 24+ en Linux, Docker Desktop en Windows) — ver [Instalación de Docker](#instalacion-de-docker) abajo
 - **docker compose** plugin (incluido en Docker Desktop / Docker Engine)
 - **API Key de Google Gemini** (gratuita en [Google AI Studio](https://aistudio.google.com/apikey))
+
+---
+
+### Instalacion de Docker
+
+Si aún no tienes Docker instalado, sigue las instrucciones según tu sistema operativo.
+
+#### Windows
+
+1. Descargar **Docker Desktop** desde [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop/)
+2. Ejecutar el instalador (`Docker Desktop Installer.exe`)
+3. Durante la instalación, marcar **"Use WSL 2 instead of Hyper-V"** (recomendado)
+4. Al finalizar, **Docker Desktop** se inicia automáticamente
+5. Abrir **PowerShell** y verificar:
+   ```powershell
+   docker --version
+   ```
+   Debe mostrar algo como `Docker version 27.x.x`
+
+> **Nota:** Docker Desktop incluye el plugin `docker compose` automáticamente. No requiere instalación adicional.
+
+#### Linux
+
+Cada distribución usa su propio gestor de paquetes. Ejemplos para las más comunes:
+
+| Distribución | Comandos de instalación |
+|-------------|------------------------|
+| **Debian / Ubuntu / Mint** | `sudo apt update && sudo apt install docker.io docker-compose-v2` |
+| **Arch / Manjaro** | `sudo pacman -S docker docker-compose` |
+| **Fedora / RHEL** | `sudo dnf install docker docker-compose` |
+| **openSUSE** | `sudo zypper install docker docker-compose` |
+
+Post-instalación (todas las distros):
+```bash
+# Iniciar Docker al arrancar el sistema
+sudo systemctl enable --now docker
+
+# (Opcional) Agregar tu usuario al grupo docker para evitar usar sudo
+sudo usermod -aG docker $USER
+# ⚠️ Cerrar sesión y volver a entrar para que el cambio surta efecto
+
+# Verificar instalacion
+docker --version
+```
+
+> **Nota:** En algunas distros el plugin `docker compose` (con espacio) se instala por separado como `docker-compose-v2`. Verifica con `docker compose version`.
 
 ---
 
@@ -122,13 +168,13 @@ Capas transversales:
 **Opcion A — git clone (Linux / Windows con Git instalado):**
 
 ```bash
-git clone https://github.com/Marcelo_CF/proyecto-final-semillero-ia-v2.git
+git clone https://github.com/Marcelo160102/proyecto-final-semillero-ia-v2.git
 cd proyecto-final-semillero-ia-v2
 ```
 
 **Opcion B — Descargar ZIP (Windows / cualquier sistema):**
 
-1. Ir a https://github.com/Marcelo_CF/proyecto-final-semillero-ia-v2
+1. Ir a https://github.com/Marcelo160102/proyecto-final-semillero-ia-v2
 2. Click en boton **"Code"** → **"Download ZIP"**
 3. Extraer la carpeta en `C:\proyecto-final-semillero-ia-v2` (Windows)
    o en `/home/tu_usuario/proyecto-final-semillero-ia-v2` (Linux)
@@ -206,35 +252,77 @@ docker compose -f docker-compose.yml -f docker-compose.phoenix.yml down -v
 
 ### Paso 6 — Probar el sistema con consultas de ejemplo
 
-**Agente de Contratos:**
-- ¿Que clausulas minimas debe tener un contrato de prestacion de servicios?
-- ¿Cuales son los tipos de contrato mas usados?
-- ¿Como es el proceso de revision y firma de un contrato?
+Cada sección muestra el **prompt exacto** que debes escribir (o acción a realizar) y la **respuesta esperada** del sistema. Todas las consultas se ingresan en el chat en `http://localhost:8080`.
 
-**Agente de Proteccion de Datos:**
-- ¿Cuales son los derechos ARCO?
-- ¿Por cuanto tiempo se conservan los datos personales despues de cancelar un servicio?
-- ¿Que hacer en caso de una violacion de seguridad?
+---
 
-**Agente de Cumplimiento:**
-- ¿Cual es el limite maximo para aceptar regalos?
-- ¿Como funciona el canal de denuncias?
-- ¿Que principios rigen el codigo de etica?
+#### 6.1 Agente de Contratos (tool: `consultar_contratos`)
 
-**Multi-topico (varios agentes):**
-- Necesito redactar un contrato de servicios para un proveedor que tratara datos personales. ¿Que clausulas debe incluir y que requisitos de proteccion de datos debo cumplir?
+| # | Prompt | Respuesta esperada |
+|---|--------|-------------------|
+| 1 | `¿Qué cláusulas mínimas debe tener un contrato de prestación de servicios?` | El orquestador invoca `consultar_contratos`. Responde enumerando cláusulas como objeto, plazo, remuneración, confidencialidad, resolución de conflictos, etc., citando la base documental. |
+| 2 | `¿Cuáles son los tipos de contrato más usados?` | Responde según la colección `contratos` (ej. prestación de servicios, confidencialidad, obra determinada, etc.). |
+| 3 | `¿Cómo es el proceso de revisión y firma de un contrato?` | Describe el flujo: recepción → revisión legal → observaciones → aprobación → firma. |
 
-**Registrar solicitud legal (multi-turno con confirmacion):**
-- Turno 1: "Quiero registrar una solicitud de revision de un contrato de confidencialidad con el proveedor DataCorp por un monto de $15,000 por 12 meses. No involucra tratamiento de datos."
-  → El asistente debe responder con un resumen de los datos y pedir confirmacion.
-- Turno 2: "si, confirma el registro"
-  → El asistente debe registrar la solicitud y devolver un ID (ej: LEG-0001).
+---
 
-**Analisis de imagen:**
-- Subir una imagen de un documento legal y escribir "Analiza este documento legal" (ruta de imagen demo: img/contrato_demo.png)
+#### 6.2 Agente de Protección de Datos (tool: `consultar_proteccion_datos`)
 
-**Fuera de alcance (debe responder "No encontré información suficiente en la base documental proporcionada"):**
-- ¿Cual es la capital de Francia?
+| # | Prompt | Respuesta esperada |
+|---|--------|-------------------|
+| 1 | `¿Cuáles son los derechos ARCO?` | El orquestador invoca `consultar_proteccion_datos`. Explica Acceso, Rectificación, Cancelación y Oposición según la normativa de la base documental. |
+| 2 | `¿Por cuánto tiempo se conservan los datos personales después de cancelar un servicio?` | Responde según la colección `proteccion_datos` (plazo legal de conservación + obligación de bloqueo). |
+| 3 | `¿Qué hacer en caso de una violación de seguridad?` | Detalla los pasos: contención, evaluación de impacto, notificación a la autoridad y a los afectados. |
+
+---
+
+#### 6.3 Agente de Cumplimiento (tool: `consultar_cumplimiento`)
+
+| # | Prompt | Respuesta esperada |
+|---|--------|-------------------|
+| 1 | `¿Cuál es el límite máximo para aceptar regalos?` | El orquestador invoca `consultar_cumplimiento`. Responde con el monto/valor máximo según el código de ética de la base documental. |
+| 2 | `¿Cómo funciona el canal de denuncias?` | Explica el proceso: recepción anónima, investigación, resolución, y protección al denunciante. |
+| 3 | `¿Qué principios rigen el código de ética?` | Enumera principios como integridad, transparencia, confidencialidad, responsabilidad, etc. |
+
+---
+
+#### 6.4 Consulta Multi-tópico (varios agentes)
+
+| Prompt | Comportamiento esperado |
+|--------|------------------------|
+| `Necesito redactar un contrato de servicios para un proveedor que tratará datos personales. ¿Qué cláusulas debe incluir y qué requisitos de protección de datos debo cumplir?` | El orquestador detecta **dos temas** distintos e invoca **múltiples tools**: primero `consultar_contratos` (cláusulas contractuales) y luego `consultar_proteccion_datos` (requisitos de datos personales). Consolida ambas respuestas en un solo mensaje. |
+
+---
+
+#### 6.5 Registro de Solicitud Legal (multi-turno con confirmación)
+
+Flujo de **dos turnos** que demuestra persistencia en BD con validación previa.
+
+| Turno | Prompt | Respuesta esperada |
+|-------|--------|-------------------|
+| **1** | `Quiero registrar una solicitud de revisión de un contrato de confidencialidad con el proveedor DataCorp por un monto de $15,000 por 12 meses. No involucra tratamiento de datos.` | El orquestador invoca `registrar_solicitud_legal`. El agente de acción **valida** los datos y responde con un resumen (tipo, proveedor, monto, plazo, involucra datos) y **pide confirmación** explícita al usuario. |
+| **2** | `sí, confirma el registro` | El orquestador re-invoca `registrar_solicitud_legal` con los datos cacheados de la memoria. El agente detecta `confirmado=True` y **persiste** en SQLite. Responde con el ID único generado (ej. `LEG-0001`). |
+
+> Puedes verificar el registro en http://localhost:8080/registros — la tabla debe mostrar la nueva solicitud con su ID, tipo, proveedor, monto y fecha.
+
+---
+
+#### 6.6 Análisis de Imagen (tool: `analizar_imagen_legal`)
+
+| Acción | Prompt | Respuesta esperada |
+|--------|--------|-------------------|
+| 1. Click en **"Subir imagen"** y seleccionar `img/contrato_demo.png` | *(la imagen se previsualiza)* |
+| 2. Escribir: | `Analiza este documento legal` | El orquestador invoca `analizar_imagen_legal`. Gemini Vision procesa la imagen y responde describiendo el contenido: tipo de documento, cláusulas identificadas, partes involucradas, etc. |
+
+> La imagen demo `img/contrato_demo.png` está incluida en el repositorio. Puedes usar cualquier imagen de documento legal.
+
+---
+
+#### 6.7 Consulta Fuera de Alcance
+
+| Prompt | Respuesta esperada |
+|--------|-------------------|
+| `¿Cuál es la capital de Francia?` | El sistema debe responder: *"No encontré información suficiente en la base documental proporcionada"*, indicando que la pregunta no está cubierta por ningún agente RAG. |
 
 ---
 
